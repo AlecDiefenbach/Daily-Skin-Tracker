@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
+    <title>Daily Skin Tracker v5</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ede9fe 0%, #fce4ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header {
+            background: white;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 20px rgba(124,111,224,0.12);
+        }
+        .header-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .header-title h1 { color: #7c6fe0; font-size: 22px; }
+        .header-title .version { font-size: 13px; color: #999; font-weight: normal; }
+        .mode-switcher {
+            display: flex;
+            background: #f5f3ff;
+            border-radius: 12px;
+            padding: 3px;
+            margin: 8px 0;
+            gap: 3px;
+        }
+        .mode-btn {
+            flex: 1; padding: 8px; border: none; border-radius: 9px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            color: #7c6fe0; background: transparent; transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .mode-btn.active {
+            background: white; color: #4c3fa0;
+            box-shadow: 0 2px 8px rgba(124,111,224,0.18);
+        }
+        .date { color: #666; font-size: 15px; margin-bottom: 10px; }
+        .date-picker-container {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px; background: #f5f3ff; border-radius: 14px; flex-wrap: wrap;
+        }
+        .date-picker-container label { font-size: 14px; font-weight: 600; color: #333; }
+        .date-picker-container input[type="date"] {
+            flex: 1; min-width: 140px; padding: 7px 10px;
+            border: 1.5px solid #7c6fe0; border-radius: 10px;
+            font-size: 14px; font-family: inherit;
+        }
+        .date-picker-container button {
+            padding: 7px 14px; background: #7c6fe0; color: white;
+            border: none; border-radius: 10px; font-size: 14px;
+            font-weight: 600; cursor: pointer; touch-action: manipulation;
+        }
+        .card {
+            background: white; border-radius: 24px; padding: 20px;
+            margin-bottom: 15px; box-shadow: 0 4px 20px rgba(124,111,224,0.10);
+        }
+        .card h2 { color: #333; font-size: 18px; margin-bottom: 14px; }
+        .streak-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #fb923c, #f43f5e);
+            color: white; padding: 3px 10px; border-radius: 12px;
+            font-size: 13px; font-weight: 600; margin-left: 8px;
+        }
+        .tap-button {
+            background: linear-gradient(135deg, #7c6fe0 0%, #a78bfa 100%);
+            color: white; border: none; padding: 14px 18px; border-radius: 16px;
+            font-size: 17px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 4px 15px rgba(124,111,224,0.35);
+            width: 100%; margin-bottom: 10px; touch-action: manipulation;
+        }
+        .tap-button:active { transform: scale(0.95); }
+        .tap-button.logged {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            box-shadow: 0 4px 15px rgba(74,222,128,0.35);
+        }
+        .tap-button .time { display: block; font-size: 13px; margin-top: 4px; opacity: 0.9; }
+        .tap-button .edit-link {
+            font-size: 11px; text-decoration: underline;
+            opacity: 0.8; margin-top: 4px; display: inline-block;
+        }
+        /* Tab nav - 7 tabs */
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 15px; }
+        .tab-button {
+            flex: 1; background: white; border: none; padding: 8px 2px;
+            border-radius: 12px; font-size: 16px; cursor: pointer; color: #666;
+            box-shadow: 0 2px 10px rgba(124,111,224,0.12);
+            display: flex; flex-direction: column; align-items: center; gap: 1px;
+            min-width: 0; touch-action: manipulation;
+        }
+        .tab-button .tab-label {
+            font-size: 8px; font-weight: 700; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+            text-transform: uppercase; letter-spacing: 0.2px;
+        }
+        .tab-button.active {
+            background: linear-gradient(135deg, #7c6fe0 0%, #a78bfa 100%);
+            color: white;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        /* Time picker modal */
+        .time-picker-modal {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+            z-index: 1000; justify-content: center; align-items: center;
+        }
+        .time-picker-modal.active { display: flex; }
+        .time-picker-content {
+            background: white; border-radius: 28px; padding: 28px;
+            max-width: 340px; width: 90%;
+        }
+        .time-picker-content h3 { color: #333; margin-bottom: 18px; text-align: center; }
+        .time-picker-wheels { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; }
+        .time-wheel {
+            width: 68px; height: 144px; overflow-y: scroll;
+            border: 1.5px solid #e8e3ff; border-radius: 14px;
+            scroll-snap-type: y mandatory; padding: 52px 0;
+        }
+        .time-wheel::-webkit-scrollbar { width: 0; }
+        .time-option {
+            height: 40px; display: flex; align-items: center;
+            justify-content: center; font-size: 19px; color: #333;
+            scroll-snap-align: center;
+        }
+        .time-picker-buttons { display: flex; gap: 10px; }
+        .time-picker-buttons button {
+            flex: 1; padding: 12px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer; touch-action: manipulation;
+        }
+        .time-picker-buttons .cancel { background: #f0eeff; color: #7c6fe0; }
+        .time-picker-buttons .confirm { background: #7c6fe0; color: white; }
+        /* Sliders */
+        .mood-section { background: #f5f3ff; border-radius: 14px; padding: 14px; margin-bottom: 15px; }
+        .slider-row { margin-bottom: 14px; }
+        .slider-row:last-child { margin-bottom: 0; }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .slider-title { display: flex; align-items: center; gap: 6px; }
+        .slider-title h4 { font-size: 14px; color: #333; margin: 0; font-weight: 600; }
+        .slider-emoji { font-size: 20px; }
+        .slider-right { display: flex; align-items: center; gap: 6px; }
+        .slider-desc { font-size: 11px; color: #666; font-style: italic; }
+        .slider-value { font-size: 19px; font-weight: bold; color: #7c6fe0; min-width: 28px; text-align: right; }
+        .mood-emoji-indicator { font-size: 20px; min-width: 24px; text-align: center; }
+        input[type="range"].mood-slider {
+            -webkit-appearance: none; width: 100%; height: 8px;
+            border-radius: 4px; outline: none; cursor: pointer;
+            background: linear-gradient(to right, #f87171 0%, #fb923c 25%, #fbbf24 50%, #a3e635 75%, #4ade80 100%);
+        }
+        input[type="range"].mood-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 22px; height: 22px;
+            border-radius: 50%; background: white; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 2px solid #7c6fe0;
+        }
+        input[type="range"].mood-slider::-moz-range-thumb {
+            width: 22px; height: 22px; border-radius: 50%; background: white;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); border: 2px solid #7c6fe0;
+        }
+        input[type="range"].sleep-quality-slider {
+            background: linear-gradient(to right, #f87171 0%, #fb923c 25%, #fbbf24 50%, #93c5fd 75%, #60a5fa 100%);
+        }
+        input[type="range"].severity-slider {
+            background: linear-gradient(to right, #4ade80 0%, #fbbf24 50%, #f87171 100%);
+        }
+        /* Period toggle */
+        .mood-period-toggle {
+            display: flex; background: #f5f3ff; border-radius: 14px;
+            padding: 4px; margin-bottom: 14px; gap: 4px;
+        }
+        .mood-period-toggle button {
+            flex: 1; padding: 9px; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            color: #7c6fe0; background: transparent; transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .mood-period-toggle button.active {
+            background: white; color: #4c3fa0;
+            box-shadow: 0 2px 8px rgba(124,111,224,0.18);
+        }
+        /* Skin subheadings */
+        .skin-subheading {
+            font-size: 12px; font-weight: 700; color: #7c6fe0;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin: 12px 0 8px 0; padding-bottom: 4px;
+            border-bottom: 1.5px solid #ddd6fe;
+        }
+        /* Expandable sections */
+        .expandable-section { margin-bottom: 12px; }
+        .section-header {
+            background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+            color: #4c3fa0; padding: 13px; border-radius: 14px;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: space-between; font-weight: 600;
+            transition: all 0.2s; border: 1px solid #c4b5fd;
+            touch-action: manipulation;
+        }
+        .section-header .arrow { transition: transform 0.3s; }
+        .section-header.expanded .arrow { transform: rotate(180deg); }
+        .section-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+        .section-content.expanded { max-height: 4000px; padding-top: 12px; }
+        /* Checkbox items */
+        .checkbox-grid { display: grid; gap: 8px; margin-top: 12px; }
+        .checkbox-item {
+            background: white; padding: 12px 14px; border-radius: 14px;
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            transition: all 0.2s; border: 1.5px solid #e8e3ff;
+            touch-action: manipulation;
+        }
+        .checkbox-item.checked { background: #dcfce7; border-color: #4ade80; }
+        .checkbox-item.overdue { background: #fee2e2; border-color: #f87171; }
+        .checkbox-item .emoji { font-size: 22px; min-width: 22px; }
+        .checkbox-item .label { flex: 1; font-size: 14px; color: #374151; }
+        .checkbox-item .due-badge {
+            font-size: 11px; padding: 3px 7px; border-radius: 7px;
+            font-weight: 600; white-space: nowrap;
+        }
+        .checkbox-item .due-badge.overdue { background: #f87171; color: white; }
+        .checkbox-item .due-badge.due-soon { background: #fb923c; color: white; }
+        .checkbox-item .due-badge.due-later { background: #4ade80; color: #166534; }
+        .checkbox-item .checkmark {
+            width: 22px; height: 22px; border: 1.5px solid #d8d0f8;
+            border-radius: 7px; display: flex; align-items: center;
+            justify-content: center; font-size: 14px; min-width: 22px;
+        }
+        .checkbox-item.checked .checkmark { background: #4ade80; border-color: #4ade80; color: white; }
+        /* Counter items */
+        .counter-item {
+            background: white; padding: 12px 14px; border-radius: 14px;
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 8px; border: 1.5px solid #e8e3ff;
+        }
+        .counter-item .emoji { font-size: 22px; }
+        .counter-item .label { flex: 1; font-size: 14px; color: #374151; }
+        .counter-controls { display: flex; align-items: center; gap: 8px; }
+        .counter-btn {
+            width: 34px; height: 34px; border: none; border-radius: 9px;
+            background: #7c6fe0; color: white; font-size: 19px; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
+        }
+        .counter-btn:active { transform: scale(0.9); }
+        .counter-value { min-width: 38px; text-align: center; font-size: 19px; font-weight: bold; color: #7c6fe0; }
+        .counter-value.exceeded { color: #f87171; }
+        /* Progress bars */
+        .progress-bar-container { margin: 12px 0; }
+        .progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #333; }
+        .progress-bar { background: #ede9fe; height: 8px; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #7c6fe0); transition: width 0.3s; }
+        .progress-fill.met-goal { background: linear-gradient(90deg, #4ade80, #22c55e); }
+        .progress-fill.exceeded-max { background: linear-gradient(90deg, #f87171, #ef4444); }
+        .stat-section { margin-bottom: 18px; }
+        .stat-section h3 { font-size: 17px; margin-bottom: 8px; color: #333; }
+        /* History items */
+        .history-item {
+            background: white; padding: 14px; border-radius: 14px;
+            margin-bottom: 8px; border: 1.5px solid #e8e3ff;
+        }
+        .history-date { font-weight: 600; color: #7c6fe0; margin-bottom: 6px; }
+        .history-details { font-size: 13px; color: #666; line-height: 1.5; }
+        /* Charts */
+        .chart-nav {
+            display: flex; align-items: center; justify-content: center;
+            gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+        }
+        .chart-nav-btn {
+            background: #7c6fe0; color: white; border: none;
+            width: 30px; height: 30px; border-radius: 9px; font-size: 13px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
+        }
+        .chart-nav-btn:disabled { background: #d8d0f8; cursor: default; }
+        .chart-nav-label { font-size: 12px; font-weight: 600; color: #333; min-width: 120px; text-align: center; }
+        /* Summary button */
+        .summary-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white; border: none; padding: 14px; border-radius: 14px;
+            font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+            margin-bottom: 14px; touch-action: manipulation;
+            box-shadow: 0 4px 15px rgba(245,87,108,0.3);
+        }
+        .summary-box {
+            background: white; border: 1.5px solid #c4b5fd; border-radius: 14px;
+            padding: 18px; margin-top: 12px; white-space: pre-wrap;
+            font-size: 13px; line-height: 1.6; color: #333; display: none;
+        }
+        .summary-box.active { display: block; }
+        .toggle-completed {
+            background: #f0eeff; border: none; padding: 7px 10px;
+            border-radius: 9px; font-size: 11px; cursor: pointer;
+            margin-top: 8px; width: 100%; color: #7c6fe0; touch-action: manipulation;
+        }
+        /* Exercise styles */
+        .ex-group { margin-bottom: 13px; }
+        .ex-group-header {
+            background: #f5f3ff; padding: 9px; border-radius: 9px;
+            font-weight: 600; cursor: pointer; display: flex;
+            justify-content: space-between; align-items: center;
+            color: #4c3fa0; touch-action: manipulation;
+        }
+        .ex-item { margin: 7px 0; }
+        .ex-checkbox {
+            display: flex; align-items: center; gap: 7px; padding: 7px;
+            background: #fafafa; border-radius: 9px; cursor: pointer;
+            touch-action: manipulation;
+        }
+        .ex-checkbox input { width: 17px; height: 17px; cursor: pointer; }
+        .ex-checkbox label { flex: 1; font-size: 13px; cursor: pointer; }
+        .ex-details {
+            margin-top: 5px; padding: 9px; background: white;
+            border: 1.5px solid #e8e3ff; border-radius: 9px; display: none;
+        }
+        .ex-details.active { display: block; }
+        .ex-set-row {
+            display: flex; gap: 4px; align-items: center;
+            margin-bottom: 5px; padding: 5px; background: #fafafa; border-radius: 7px;
+        }
+        .ex-set-label { width: 38px; font-size: 10px; font-weight: 600; color: #666; }
+        .ex-input-group { display: flex; gap: 2px; align-items: center; flex: 1; }
+        .ex-input-group button {
+            width: 26px; height: 26px; border: none; background: #7c6fe0;
+            color: white; border-radius: 6px; font-size: 15px; cursor: pointer;
+            touch-action: manipulation;
+        }
+        .ex-input-group input {
+            width: 38px; height: 26px; border: 1.5px solid #ddd;
+            border-radius: 6px; text-align: center; font-size: 11px;
+        }
+        .ex-input-group .unit { font-size: 9px; color: #999; width: 22px; }
+        .ex-del-btn {
+            width: 26px; height: 26px; background: #f87171; color: white;
+            border: none; border-radius: 6px; font-size: 15px; cursor: pointer;
+            touch-action: manipulation;
+        }
+        .ex-add-btn {
+            width: 100%; padding: 7px; background: #dcfce7;
+            border: 1.5px dashed #4ade80; border-radius: 7px;
+            color: #16a34a; font-weight: 600; cursor: pointer;
+            margin-top: 5px; font-size: 11px; touch-action: manipulation;
+        }
+        .ex-stats { display: flex; gap: 7px; padding: 7px; background: #eff6ff; border-radius: 7px; margin-top: 7px; }
+        .ex-stats > div { flex: 1; text-align: center; }
+        .ex-stats .label { font-size: 9px; color: #666; margin-bottom: 2px; }
+        .ex-stats .value { font-size: 10px; font-weight: 600; color: #3b82f6; }
+        /* Cream grid */
+        .cream-section-title {
+            font-size: 13px; font-weight: 700; color: #4c3fa0;
+            margin: 14px 0 8px 0; padding: 6px 10px;
+            background: #ede9fe; border-radius: 8px;
+        }
+        .cream-grid {
+            display: grid; grid-template-columns: 68px 1fr 1fr 1fr;
+            gap: 6px; margin-bottom: 10px; align-items: center;
+        }
+        .cream-col-header { text-align: center; font-size: 18px; }
+        .cream-row-label { font-size: 11px; font-weight: 700; color: #4c3fa0; padding: 2px 0; }
+        .cream-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .cream-plus-btn {
+            width: 32px; height: 32px; border: none; border-radius: 8px;
+            background: linear-gradient(135deg, #7c6fe0, #a78bfa);
+            color: white; font-size: 19px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
+        }
+        .cream-count { font-size: 14px; font-weight: bold; color: #7c6fe0; min-height: 17px; }
+        .cream-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #7c6fe0; }
+        .cream-footnote { font-size: 10px; color: #999; margin-top: 6px; line-height: 1.4; }
+        /* Diet */
+        .meal-add-row { display: flex; gap: 5px; margin-bottom: 7px; }
+        .meal-add-row select, .meal-add-row input[type="text"] {
+            flex: 1; padding: 8px; border: 1.5px solid #e8e3ff;
+            border-radius: 9px; font-size: 13px; font-family: inherit;
+        }
+        .meal-add-row button {
+            padding: 8px 13px; background: #7c6fe0; color: white;
+            border: none; border-radius: 9px; font-size: 17px;
+            cursor: pointer; touch-action: manipulation;
+        }
+        .ingredient-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; margin-bottom: 8px; }
+        .chip {
+            background: #ede9fe; border: 1px solid #c4b5fd;
+            border-radius: 18px; padding: 4px 10px; font-size: 12px;
+            display: flex; align-items: center; gap: 3px;
+        }
+        .chip button {
+            background: none; border: none; color: #7c6fe0;
+            cursor: pointer; font-size: 13px; padding: 0; line-height: 1;
+            touch-action: manipulation;
+        }
+        .save-custom-btn {
+            font-size: 11px; color: #7c6fe0; background: none; border: none;
+            cursor: pointer; text-decoration: underline; padding: 2px 0;
+            touch-action: manipulation;
+        }
+        /* Triggers */
+        .trigger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+        .trigger-item {
+            display: flex; align-items: center; gap: 7px; background: white;
+            padding: 9px 11px; border-radius: 11px; border: 1.5px solid #e8e3ff;
+        }
+        .trigger-item input[type="checkbox"] { width: 17px; height: 17px; accent-color: #f87171; cursor: pointer; }
+        .trigger-item label { font-size: 13px; color: #374151; cursor: pointer; flex: 1; }
+        .trigger-item.triggered { background: #fee2e2; border-color: #f87171; }
+        /* Duration selectors */
+        .habit-item-wrap { margin-bottom: 8px; }
+        .duration-row { margin: 4px 0 10px 34px; }
+        .dur-total { font-size: 13px; font-weight: 600; color: #7c6fe0; margin-bottom: 4px; display: block; }
+        .dur-btns { display: flex; flex-wrap: wrap; gap: 3px; }
+        .dur-btn {
+            padding: 4px 7px; border: none; border-radius: 7px;
+            background: #ede9fe; color: #4c3fa0; font-size: 11px;
+            font-weight: 600; cursor: pointer; touch-action: manipulation;
+        }
+        .dur-btn:active { background: #7c6fe0; color: white; }
+        .dur-btn.reset-btn { background: #fee2e2; color: #ef4444; }
+        /* Habits groups */
+        .habit-group-title {
+            font-size: 12px; font-weight: 700; color: #7c6fe0;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin: 14px 0 8px 0; padding-bottom: 4px;
+            border-bottom: 1.5px solid #ddd6fe;
+        }
+        /* Photo */
+        .photo-gallery-group { margin-bottom: 14px; }
+        .photo-gallery-group h4 { font-size: 13px; color: #666; margin-bottom: 7px; font-weight: 600; }
+        .photo-thumbs { display: flex; flex-wrap: wrap; gap: 7px; }
+        .photo-thumb { position: relative; }
+        .photo-thumb img { width: 88px; height: 88px; object-fit: cover; border-radius: 10px; border: 2px solid #e8e3ff; display: block; }
+        .photo-thumb .photo-time { font-size: 9px; color: #666; text-align: center; margin-top: 2px; }
+        .photo-thumb .photo-del {
+            position: absolute; top: 2px; right: 2px;
+            background: rgba(248,113,113,0.9); color: white; border: none;
+            border-radius: 50%; width: 19px; height: 19px; font-size: 11px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation;
+        }
+        /* Smoke free */
+        .smoke-free-box {
+            margin-top: 14px; padding: 12px; background: #f0fdf4;
+            border-radius: 14px; border: 1.5px solid #4ade80;
+        }
+        .smoke-free-streak { font-size: 12px; color: #16a34a; margin-top: 4px; }
+        /* Weather inputs */
+        .weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .weather-field label { font-size: 11px; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
+        .weather-field input {
+            width: 100%; padding: 8px; border: 1.5px solid #e8e3ff;
+            border-radius: 9px; font-size: 14px; font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-title">
+            <h1>🌿 Daily Skin Tracker</h1>
+            <span class="version">v5</span>
+        </div>
+        <div class="mode-switcher">
+            <button class="mode-btn active" id="modeBtnEntry" onclick="switchMode('entry')">✏️ Entry</button>
+            <button class="mode-btn" id="modeBtnStats" onclick="switchMode('stats')">📊 Stats</button>
+        </div>
+        <div class="date" id="currentDate"></div>
+        <div class="date-picker-container" id="datePicker" style="display:none;">
+            <button onclick="goToToday()" id="todayBtn" style="background:#4ade80;color:#14532d;" touch-action="manipulation">Today</button>
+            <label>📅</label>
+            <input type="date" id="dateInput" onchange="loadDateData()">
+        </div>
+        <!-- Hidden import/export -->
+        <div style="display:none;">
+            <button onclick="exportData()">Export JSON</button>
+            <button onclick="exportCSV()">Export CSV</button>
+            <button onclick="document.getElementById('importFile').click()">Import JSON</button>
+            <input type="file" id="importFile" accept=".json" onchange="importData(event)">
+        </div>
+    </div>
+
+    <!-- Time Picker Modal -->
+    <div class="time-picker-modal" id="timePickerModal">
+        <div class="time-picker-content">
+            <h3 id="timePickerTitle">Set Time</h3>
+            <div class="time-picker-wheels">
+                <div class="time-wheel" id="hourWheel"></div>
+                <div style="font-size:22px;color:#333;display:flex;align-items:center;">:</div>
+                <div class="time-wheel" id="minuteWheel"></div>
+            </div>
+            <div class="time-picker-buttons">
+                <button class="cancel" onclick="closeTimePicker()">Cancel</button>
+                <button class="confirm" onclick="confirmTime()">Set</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENTRY MODE -->
+    <div id="entryMode">
+        <!-- 7-Tab Nav -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="switchTab('today',event)">🌅<span class="tab-label">Today</span></button>
+            <button class="tab-button" onclick="switchTab('creams',event)">🧴<span class="tab-label">Creams</span></button>
+            <button class="tab-button" onclick="switchTab('diet',event)">🥗<span class="tab-label">Diet</span></button>
+            <button class="tab-button" onclick="switchTab('photo',event)">📸<span class="tab-label">Photo</span></button>
+            <button class="tab-button" onclick="switchTab('habits',event)">🧘<span class="tab-label">Habits</span></button>
+            <button class="tab-button" onclick="switchTab('exercise',event)">💪<span class="tab-label">Exer.</span></button>
+            <button class="tab-button" onclick="switchTab('cleaning',event)">🧹<span class="tab-label">Clean</span></button>
+        </div>
+
+        <!-- TODAY TAB -->
+        <div class="tab-content active" id="today-tab">
+            <!-- Sleep -->
+            <div class="card">
+                <h2>😴 Sleep<span class="streak-badge" id="sleepStreak" style="display:none;">🔥 0 days</span></h2>
+                <button class="tap-button" id="wakeBtn" onclick="logWakeTime()">
+                    <span id="wakeBtnText">☀️ Out of Bed</span>
+                    <span class="time" id="wakeTime"></span>
+                    <span class="edit-link" id="wakeEdit" style="display:none;" onclick="event.stopPropagation();editWakeTime()">Edit time</span>
+                </button>
+                <button class="tap-button" id="sleepBtn" onclick="logSleepTime()">
+                    <span id="sleepBtnText">🌙 Going to Bed</span>
+                    <span class="time" id="sleepTime"></span>
+                    <span class="edit-link" id="sleepEdit" style="display:none;" onclick="event.stopPropagation();editSleepTime()">Edit time</span>
+                </button>
+                <div class="mood-section" style="margin-top:14px;">
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title">
+                                <h4>😴 Sleep Quality</h4>
+                                <span class="slider-emoji" id="sleepQualityEmoji">😴</span>
+                            </div>
+                            <div class="slider-right">
+                                <span class="slider-desc" id="sleepQualityDesc">Average</span>
+                                <span class="slider-value" id="sleepQualityValue">5</span>
+                            </div>
+                        </div>
+                        <input type="range" min="1" max="10" value="5" class="mood-slider sleep-quality-slider" id="sleepQualitySlider" oninput="updateMoodTracking('sleepQuality',this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skin Condition -->
+            <div class="card">
+                <h2>🌡️ Skin Condition</h2>
+                <div class="mood-period-toggle">
+                    <button id="skinToggleMorning" class="active" onclick="toggleSkinPeriod('morning',event)">🌅 Morning</button>
+                    <button id="skinToggleEvening" onclick="toggleSkinPeriod('evening',event)">🌆 Evening</button>
+                </div>
+
+                <!-- Morning Skin Panel -->
+                <div id="skinMorningPanel" class="mood-section">
+                    <div class="skin-subheading">Severity</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-eyes">😊</span><h4>Eyes</h4></div>
+                            <span class="slider-value" id="skin-val-morning-eyes">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-eyes" oninput="updateSkinSlider('morning','eyes',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-face">😊</span><h4>Face</h4></div>
+                            <span class="slider-value" id="skin-val-morning-face">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-face" oninput="updateSkinSlider('morning','face',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-body">😊</span><h4>Body</h4></div>
+                            <span class="slider-value" id="skin-val-morning-body">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-body" oninput="updateSkinSlider('morning','body',this.value)">
+                    </div>
+                    <div class="skin-subheading">Symptoms</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-flakiness">😊</span><h4>Flakiness</h4></div>
+                            <span class="slider-value" id="skin-val-morning-flakiness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-flakiness" oninput="updateSkinSlider('morning','flakiness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-dryness">😊</span><h4>Dryness</h4></div>
+                            <span class="slider-value" id="skin-val-morning-dryness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-dryness" oninput="updateSkinSlider('morning','dryness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-itchiness">😊</span><h4>Itchiness</h4></div>
+                            <span class="slider-value" id="skin-val-morning-itchiness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-itchiness" oninput="updateSkinSlider('morning','itchiness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-redness">😊</span><h4>Redness</h4></div>
+                            <span class="slider-value" id="skin-val-morning-redness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-redness" oninput="updateSkinSlider('morning','redness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-soreness">😊</span><h4>Soreness</h4></div>
+                            <span class="slider-value" id="skin-val-morning-soreness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-soreness" oninput="updateSkinSlider('morning','soreness',this.value)">
+                    </div>
+                    <div class="skin-subheading">Psychological</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-appearanceAnxiety">😊</span><h4>Appearance Anxiety</h4></div>
+                            <span class="slider-value" id="skin-val-morning-appearanceAnxiety">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-appearanceAnxiety" oninput="updateSkinSlider('morning','appearanceAnxiety',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-morning-depressionFatigue">😊</span><h4>Depression / Fatigue</h4></div>
+                            <span class="slider-value" id="skin-val-morning-depressionFatigue">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-morning-depressionFatigue" oninput="updateSkinSlider('morning','depressionFatigue',this.value)">
+                    </div>
+                </div>
+
+                <!-- Evening Skin Panel -->
+                <div id="skinEveningPanel" class="mood-section" style="display:none;">
+                    <div class="skin-subheading">Severity</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-eyes">😊</span><h4>Eyes</h4></div>
+                            <span class="slider-value" id="skin-val-evening-eyes">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-eyes" oninput="updateSkinSlider('evening','eyes',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-face">😊</span><h4>Face</h4></div>
+                            <span class="slider-value" id="skin-val-evening-face">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-face" oninput="updateSkinSlider('evening','face',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-body">😊</span><h4>Body</h4></div>
+                            <span class="slider-value" id="skin-val-evening-body">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-body" oninput="updateSkinSlider('evening','body',this.value)">
+                    </div>
+                    <div class="skin-subheading">Symptoms</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-flakiness">😊</span><h4>Flakiness</h4></div>
+                            <span class="slider-value" id="skin-val-evening-flakiness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-flakiness" oninput="updateSkinSlider('evening','flakiness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-dryness">😊</span><h4>Dryness</h4></div>
+                            <span class="slider-value" id="skin-val-evening-dryness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-dryness" oninput="updateSkinSlider('evening','dryness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-itchiness">😊</span><h4>Itchiness</h4></div>
+                            <span class="slider-value" id="skin-val-evening-itchiness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-itchiness" oninput="updateSkinSlider('evening','itchiness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-redness">😊</span><h4>Redness</h4></div>
+                            <span class="slider-value" id="skin-val-evening-redness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-redness" oninput="updateSkinSlider('evening','redness',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-soreness">😊</span><h4>Soreness</h4></div>
+                            <span class="slider-value" id="skin-val-evening-soreness">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-soreness" oninput="updateSkinSlider('evening','soreness',this.value)">
+                    </div>
+                    <div class="skin-subheading">Psychological</div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-appearanceAnxiety">😊</span><h4>Appearance Anxiety</h4></div>
+                            <span class="slider-value" id="skin-val-evening-appearanceAnxiety">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-appearanceAnxiety" oninput="updateSkinSlider('evening','appearanceAnxiety',this.value)">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <div class="slider-title"><span class="slider-emoji" id="skin-emoji-evening-depressionFatigue">😊</span><h4>Depression / Fatigue</h4></div>
+                            <span class="slider-value" id="skin-val-evening-depressionFatigue">1</span>
+                        </div>
+                        <input type="range" min="1" max="10" value="1" class="mood-slider severity-slider" id="skin-evening-depressionFatigue" oninput="updateSkinSlider('evening','depressionFatigue',this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather -->
+            <div class="card">
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('weather',event)">
+                        <span>🌤️ Weather</span>
+                        <span class="arrow">▼</span>
+                    </div>
+                    <div class="section-content" id="section-weather">
+                        <div class="weather-grid">
+                            <div class="weather-field">
+                                <label>Min Temp (°C)</label>
+                                <input type="number" id="weather-minTemp" placeholder="e.g. 18" oninput="saveWeather()">
+                            </div>
+                            <div class="weather-field">
+                                <label>Max Temp (°C)</label>
+                                <input type="number" id="weather-maxTemp" placeholder="e.g. 28" oninput="saveWeather()">
+                            </div>
+                            <div class="weather-field">
+                                <label>Humidity (%)</label>
+                                <input type="number" id="weather-humidity" placeholder="e.g. 65" oninput="saveWeather()">
+                            </div>
+                            <div class="weather-field">
+                                <label>Rainfall (mm)</label>
+                                <input type="number" id="weather-rainfall" placeholder="e.g. 0" oninput="saveWeather()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CREAMS TAB -->
+        <div class="tab-content" id="creams-tab">
+            <div class="card">
+                <h2>🧴 Creams</h2>
+                <div class="mood-period-toggle">
+                    <button id="creamToggleMorning" class="active" onclick="toggleCreamPeriod('morning')">🌅 Morning</button>
+                    <button id="creamToggleEvening" onclick="toggleCreamPeriod('evening')">🌆 Evening</button>
+                </div>
+
+                <!-- Morning Cream Panel -->
+                <div id="creamMorningPanel">
+                    <div class="cream-section-title">💧 Moisturiser</div>
+                    <div class="cream-grid">
+                        <div></div>
+                        <div class="cream-col-header">👁</div>
+                        <div class="cream-col-header">😊</div>
+                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-row-label">QV</div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','eyes')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qv-eyes">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','face')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qv-face">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','body')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qv-body">0</span>
+                        </div>
+                        <div class="cream-row-label">QV Int</div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','eyes')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qvInt-eyes">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','face')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qvInt-face">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','body')">+</button>
+                            <span class="cream-count" id="cream-count-morning-qvInt-body">0</span>
+                        </div>
+                    </div>
+                    <div class="cream-section-title">💊 Steroid Creams</div>
+                    <div class="cream-grid">
+                        <div></div>
+                        <div class="cream-col-header">👁</div>
+                        <div class="cream-col-header">😊</div>
+                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-row-label">HC</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-hc-eyes" onchange="toggleSteroid('morning','hc','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-hc-face" onchange="toggleSteroid('morning','hc','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-hc-body" onchange="toggleSteroid('morning','hc','body')"></div>
+                        <div class="cream-row-label">Adv.F</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-advF-eyes" onchange="toggleSteroid('morning','advF','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-advF-face" onchange="toggleSteroid('morning','advF','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-advF-body" onchange="toggleSteroid('morning','advF','body')"></div>
+                        <div class="cream-row-label">Adv.</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-adv-eyes" onchange="toggleSteroid('morning','adv','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-adv-face" onchange="toggleSteroid('morning','adv','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-adv-body" onchange="toggleSteroid('morning','adv','body')"></div>
+                        <div class="cream-row-label">Eluph</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-eluph-eyes" onchange="toggleSteroid('morning','eluph','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-eluph-face" onchange="toggleSteroid('morning','eluph','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-eluph-body" onchange="toggleSteroid('morning','eluph','body')"></div>
+                    </div>
+                    <p class="cream-footnote">HC=Hydrocortisone Ointment · Adv.F=Advantan Fatty · Adv.=Advantan · Eluph=Eluphrat</p>
+                </div>
+
+                <!-- Evening Cream Panel -->
+                <div id="creamEveningPanel" style="display:none;">
+                    <div class="cream-section-title">💧 Moisturiser</div>
+                    <div class="cream-grid">
+                        <div></div>
+                        <div class="cream-col-header">👁</div>
+                        <div class="cream-col-header">😊</div>
+                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-row-label">QV</div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','eyes')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qv-eyes">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','face')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qv-face">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','body')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qv-body">0</span>
+                        </div>
+                        <div class="cream-row-label">QV Int</div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','eyes')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qvInt-eyes">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','face')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qvInt-face">0</span>
+                        </div>
+                        <div class="cream-cell">
+                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','body')">+</button>
+                            <span class="cream-count" id="cream-count-evening-qvInt-body">0</span>
+                        </div>
+                    </div>
+                    <div class="cream-section-title">💊 Steroid Creams</div>
+                    <div class="cream-grid">
+                        <div></div>
+                        <div class="cream-col-header">👁</div>
+                        <div class="cream-col-header">😊</div>
+                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-row-label">HC</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-hc-eyes" onchange="toggleSteroid('evening','hc','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-hc-face" onchange="toggleSteroid('evening','hc','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-hc-body" onchange="toggleSteroid('evening','hc','body')"></div>
+                        <div class="cream-row-label">Adv.F</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-advF-eyes" onchange="toggleSteroid('evening','advF','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-advF-face" onchange="toggleSteroid('evening','advF','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-advF-body" onchange="toggleSteroid('evening','advF','body')"></div>
+                        <div class="cream-row-label">Adv.</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-adv-eyes" onchange="toggleSteroid('evening','adv','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-adv-face" onchange="toggleSteroid('evening','adv','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-adv-body" onchange="toggleSteroid('evening','adv','body')"></div>
+                        <div class="cream-row-label">Eluph</div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-eluph-eyes" onchange="toggleSteroid('evening','eluph','eyes')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-eluph-face" onchange="toggleSteroid('evening','eluph','face')"></div>
+                        <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-eluph-body" onchange="toggleSteroid('evening','eluph','body')"></div>
+                    </div>
+                    <p class="cream-footnote">HC=Hydrocortisone Ointment · Adv.F=Advantan Fatty · Adv.=Advantan · Eluph=Eluphrat</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DIET TAB -->
+        <div class="tab-content" id="diet-tab">
+            <div class="card">
+                <h2>🥗 Diet</h2>
+                <!-- Breakfast -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('breakfast',event)"><span>🍳 Breakfast</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-breakfast">
+                        <div class="meal-add-row">
+                            <select id="sel-breakfast"><option value="">Select ingredient...</option></select>
+                            <input type="text" id="txt-breakfast" placeholder="Or type...">
+                            <button onclick="addIngredient('breakfast')">+</button>
+                        </div>
+                        <div class="ingredient-chips" id="chips-breakfast"></div>
+                        <button class="save-custom-btn" onclick="saveCustomIngredient('breakfast')">💾 Save typed item to list</button>
+                    </div>
+                </div>
+                <!-- Lunch -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('lunch',event)"><span>🥗 Lunch</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-lunch">
+                        <div class="meal-add-row">
+                            <select id="sel-lunch"><option value="">Select ingredient...</option></select>
+                            <input type="text" id="txt-lunch" placeholder="Or type...">
+                            <button onclick="addIngredient('lunch')">+</button>
+                        </div>
+                        <div class="ingredient-chips" id="chips-lunch"></div>
+                        <button class="save-custom-btn" onclick="saveCustomIngredient('lunch')">💾 Save typed item to list</button>
+                    </div>
+                </div>
+                <!-- Dinner -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('dinner',event)"><span>🍽️ Dinner</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-dinner">
+                        <div class="meal-add-row">
+                            <select id="sel-dinner"><option value="">Select ingredient...</option></select>
+                            <input type="text" id="txt-dinner" placeholder="Or type...">
+                            <button onclick="addIngredient('dinner')">+</button>
+                        </div>
+                        <div class="ingredient-chips" id="chips-dinner"></div>
+                        <button class="save-custom-btn" onclick="saveCustomIngredient('dinner')">💾 Save typed item to list</button>
+                    </div>
+                </div>
+                <!-- Snacks -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('snacks',event)"><span>🍓 Snacks</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-snacks">
+                        <div class="meal-add-row">
+                            <select id="sel-snacks"><option value="">Select ingredient...</option></select>
+                            <input type="text" id="txt-snacks" placeholder="Or type...">
+                            <button onclick="addIngredient('snacks')">+</button>
+                        </div>
+                        <div class="ingredient-chips" id="chips-snacks"></div>
+                        <button class="save-custom-btn" onclick="saveCustomIngredient('snacks')">💾 Save typed item to list</button>
+                    </div>
+                </div>
+                <!-- Drinks -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('drinks',event)"><span>🥤 Drinks</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-drinks">
+                        <div class="meal-add-row">
+                            <input type="text" id="txt-drinks" placeholder="Water, Tea, Juice..." style="flex:1;">
+                            <button onclick="addDrink()">+</button>
+                        </div>
+                        <div class="ingredient-chips" id="chips-drinks"></div>
+                    </div>
+                </div>
+                <!-- Likely Triggers -->
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('triggers',event)"><span>⚠️ Likely Triggers</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-triggers">
+                        <div class="trigger-grid">
+                            <div class="trigger-item" id="trigitem-dairy"><input type="checkbox" id="trig-dairy" onchange="toggleTrigger('dairy')"><label for="trig-dairy">🥛 Dairy</label></div>
+                            <div class="trigger-item" id="trigitem-garlic"><input type="checkbox" id="trig-garlic" onchange="toggleTrigger('garlic')"><label for="trig-garlic">🧄 Garlic</label></div>
+                            <div class="trigger-item" id="trigitem-onion"><input type="checkbox" id="trig-onion" onchange="toggleTrigger('onion')"><label for="trig-onion">🧅 Onion</label></div>
+                            <div class="trigger-item" id="trigitem-soy"><input type="checkbox" id="trig-soy" onchange="toggleTrigger('soy')"><label for="trig-soy">🫘 Soy</label></div>
+                            <div class="trigger-item" id="trigitem-chilli"><input type="checkbox" id="trig-chilli" onchange="toggleTrigger('chilli')"><label for="trig-chilli">🌶️ Chilli</label></div>
+                            <div class="trigger-item" id="trigitem-chocolate"><input type="checkbox" id="trig-chocolate" onchange="toggleTrigger('chocolate')"><label for="trig-chocolate">🍫 Chocolate</label></div>
+                            <div class="trigger-item" id="trigitem-caffeine"><input type="checkbox" id="trig-caffeine" onchange="toggleTrigger('caffeine')"><label for="trig-caffeine">☕ Caffeine</label></div>
+                            <div class="trigger-item" id="trigitem-softDrink"><input type="checkbox" id="trig-softDrink" onchange="toggleTrigger('softDrink')"><label for="trig-softDrink">🥤 Soft Drink</label></div>
+                            <div class="trigger-item" id="trigitem-alcohol"><input type="checkbox" id="trig-alcohol" onchange="toggleTrigger('alcohol')"><label for="trig-alcohol">🍺 Alcohol</label></div>
+                        </div>
+                        <div style="margin-top:8px;">
+                            <div style="font-size:12px;font-weight:600;color:#666;margin-bottom:6px;">Other triggers:</div>
+                            <div class="meal-add-row">
+                                <input type="text" id="txt-other-trigger" placeholder="e.g. Stress, Heat..." style="flex:1;">
+                                <button onclick="addOtherTrigger()">+</button>
+                            </div>
+                            <div class="ingredient-chips" id="chips-other-trigger"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHOTO TAB -->
+        <div class="tab-content" id="photo-tab">
+            <div class="card">
+                <h2>📸 Skin Photos</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:14px;">Take photos to track your skin condition over time. Saved locally on your device.</p>
+                <div style="display:flex;gap:10px;margin-bottom:18px;">
+                    <button class="tap-button" style="margin-bottom:0;" onclick="capturePhoto('face')">😊 Face / Neck</button>
+                    <button class="tap-button" style="margin-bottom:0;background:linear-gradient(135deg,#4ade80,#22c55e);" onclick="capturePhoto('body')">🧴 Body</button>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoCapture(event)">
+                <div id="photoGallery"><p style="color:#999;font-size:13px;text-align:center;padding:20px;">No photos yet for today.</p></div>
+            </div>
+        </div>
+
+        <!-- HABITS TAB -->
+        <div class="tab-content" id="habits-tab">
+            <div class="card">
+                <h2>🌿 Habits</h2>
+
+                <div class="habit-group-title">Wellbeing</div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('morningSun')" id="item-morningSun"><span class="emoji">🌅</span><span class="label">Morning Sun</span><span class="checkmark"></span></div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('surfing')" id="item-surfing"><span class="emoji">🏄</span><span class="label">Surfing</span><span class="checkmark"></span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-surfing">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('surfing',5)">+5m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('surfing',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('surfing')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('walk')" id="item-walk"><span class="emoji">🚶</span><span class="label">Walk</span><span class="checkmark"></span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-walk">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('walk',5)">+5m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('walk',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('walk',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('walk')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('afternoonSun')" id="item-afternoonSun"><span class="emoji">🌇</span><span class="label">Afternoon Sun</span><span class="checkmark"></span></div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('socialise')" id="item-socialise"><span class="emoji">👥</span><span class="label">Socialise</span><span class="checkmark"></span></div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" onclick="toggleHabit('meditate')" id="item-meditate"><span class="emoji">🧘</span><span class="label">Meditate</span><span class="checkmark"></span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-meditate">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('meditate',5)">+5m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('meditate',60)">+1h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('meditate')">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="habit-group-title">Productivity</div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">📋</span><span class="label">Life Admin</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-lifeAdmin">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',5)">+5m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('lifeAdmin',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('lifeAdmin')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">🇧🇷</span><span class="label">Portuguese</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-portuguese">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('portuguese',5)">+5m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('portuguese',60)">+1h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('portuguese')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">💰</span><span class="label">Budget</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-budget">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('budget',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('budget',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('budget',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('budget',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('budget',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('budget',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('budget')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">✈️</span><span class="label">Travel Planning</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-travelPlanning">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('travelPlanning',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('travelPlanning',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('travelPlanning',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('travelPlanning',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('travelPlanning',90)">+90m</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('travelPlanning')">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="habit-group-title">Relaxing</div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">📚</span><span class="label">Reading</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-reading">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('reading',10)">+10m</button>
+                            <button class="dur-btn" onclick="addDuration('reading',15)">+15m</button>
+                            <button class="dur-btn" onclick="addDuration('reading',20)">+20m</button>
+                            <button class="dur-btn" onclick="addDuration('reading',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('reading',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('reading',60)">+1h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('reading')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">📺</span><span class="label">TV</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-tv">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('tv',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('tv',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('tv',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('tv',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('tv',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('tv')">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="habit-item-wrap">
+                    <div class="checkbox-item" style="cursor:default;"><span class="emoji">🎮</span><span class="label">Video Games</span></div>
+                    <div class="duration-row">
+                        <span class="dur-total" id="dur-total-videoGames">0 min</span>
+                        <div class="dur-btns">
+                            <button class="dur-btn" onclick="addDuration('videoGames',30)">+30m</button>
+                            <button class="dur-btn" onclick="addDuration('videoGames',45)">+45m</button>
+                            <button class="dur-btn" onclick="addDuration('videoGames',60)">+1h</button>
+                            <button class="dur-btn" onclick="addDuration('videoGames',90)">+90m</button>
+                            <button class="dur-btn" onclick="addDuration('videoGames',120)">+2h</button>
+                            <button class="dur-btn reset-btn" onclick="resetDuration('videoGames')">✕</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Smoke-free -->
+                <div class="smoke-free-box">
+                    <div class="checkbox-item" onclick="toggleSmokeFree()" id="item-smokeFree" style="background:transparent;border:none;padding:0;">
+                        <span class="emoji">🚭</span>
+                        <span class="label" style="font-weight:600;">Smoke-free today</span>
+                        <span class="checkmark" id="smokeFreeCheck"></span>
+                    </div>
+                    <div class="smoke-free-streak" id="smokeFreeStreak"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXERCISE TAB -->
+        <div class="tab-content" id="exercise-tab">
+            <div class="card" style="background:#fff8e1;">
+                <h3 style="margin-bottom:14px;">🚴 Cardio</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:4px;">Time (min)</label>
+                        <input type="number" id="bikeTime" value="0" min="0" style="width:100%;padding:9px;border:2px solid #ddd;border-radius:8px;font-size:13px;" oninput="saveExerciseData()">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:4px;">Calories</label>
+                        <input type="number" id="bikeCalories" value="0" min="0" style="width:100%;padding:9px;border:2px solid #ddd;border-radius:8px;font-size:13px;" oninput="saveExerciseData()">
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>💪 Weights</h3>
+                <div id="weightsContainer"></div>
+            </div>
+        </div>
+
+        <!-- CLEANING TAB -->
+        <div class="tab-content" id="cleaning-tab">
+            <div class="card">
+                <h2>🧹 Cleaning Tasks</h2>
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('weekly',event)"><span>📅 Weekly Clean (Every 7 days)</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-weekly">
+                        <div class="checkbox-grid" id="weekly-tasks"></div>
+                        <button class="toggle-completed" onclick="toggleCompleted('weekly')"><span id="toggle-weekly-text">Show More</span></button>
+                    </div>
+                </div>
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('monthly',event)"><span>📆 Monthly Tasks (Every 30 days)</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-monthly">
+                        <div class="checkbox-grid" id="monthly-tasks"></div>
+                        <button class="toggle-completed" onclick="toggleCompleted('monthly')"><span id="toggle-monthly-text">Show More</span></button>
+                    </div>
+                </div>
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('quarterly',event)"><span>📊 Quarterly Tasks (Every 90 days)</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-quarterly">
+                        <div class="checkbox-grid" id="quarterly-tasks"></div>
+                        <button class="toggle-completed" onclick="toggleCompleted('quarterly')"><span id="toggle-quarterly-text">Show More</span></button>
+                    </div>
+                </div>
+                <div class="expandable-section">
+                    <div class="section-header" onclick="toggleSection('yearly',event)"><span>📅 Yearly Tasks (Every 365 days)</span><span class="arrow">▼</span></div>
+                    <div class="section-content" id="section-yearly">
+                        <div class="checkbox-grid" id="yearly-tasks"></div>
+                        <button class="toggle-completed" onclick="toggleCompleted('yearly')"><span id="toggle-yearly-text">Show More</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- end entryMode -->
+
+    <!-- STATS MODE -->
+    <div id="statsMode" style="display:none;">
+        <div class="card">
+            <h2>📅 Recent History</h2>
+            <div id="historyList"></div>
+        </div>
+        <div class="card">
+            <h2>🌡️ Skin Tracking</h2>
+            <div style="position:relative;">
+                <div style="height:380px;position:relative;"><canvas id="skinChart"></canvas></div>
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="skinScrollContainer" onscroll="updateChartWindow('skin')">
+                    <div id="skinScrollTrack" style="height:1px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>😴 Sleep Patterns</h2>
+            <div style="position:relative;">
+                <div style="position:relative;"><canvas id="sleepChart" style="height:360px;"></canvas></div>
+                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="sleepScrollContainer" onscroll="updateChartWindow('sleep')">
+                    <div id="sleepScrollTrack" style="height:1px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="stat-section">
+                <h3>🏃 Activity This Week</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🏄 Surfing days</span><span id="surfingCount">0/7</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="surfingProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🚶 Walking days</span><span id="walkCount">0/7</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="walkProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🌅 Morning sun days</span><span id="morningSunCount">0/7</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="morningSunProgress"></div></div>
+                </div>
+            </div>
+            <div class="stat-section">
+                <h3>⏱️ Time This Week</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>📋 Life Admin (goal 3.5h)</span><span id="lifeAdminTime">0h / 3.5h</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="lifeAdminProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>📚 Reading (goal 70m)</span><span id="readingTime">0m / 70m</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="readingProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🇧🇷 Portuguese (goal 70m)</span><span id="portugueseTime">0m / 70m</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="portugueseProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🎮 Video Games (max 2.3h)</span><span id="videoGamesTime">0h / 2.3h</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="videoGamesProgress"></div></div>
+                </div>
+            </div>
+            <div class="stat-section">
+                <h3>⚠️ Diet Triggers This Week</h3>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🍫 Chocolate days</span><span id="chocolateDays">0</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="chocolateProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>🍺 Alcohol days</span><span id="alcoholDays">0</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="alcoholProgress"></div></div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-label"><span>☕ Caffeine days</span><span id="caffeineDays">0</span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="caffeineProgress"></div></div>
+                </div>
+            </div>
+        </div>
+    </div><!-- end statsMode -->
+
+</div><!-- end container -->
+<script>
+// === GLOBALS ===
+let todayData, allData, cleaningData;
+let showCompletedSections = { weekly: false, monthly: false, quarterly: false, yearly: false };
+let sleepChart = null, skinChart = null;
+let skinWindowStart = 0, sleepWindowStart = 0;
+const WINDOW_SIZE = 14;
+let totalDataDays = 0;
+let currentTimePickerType = null;
+let currentEditDate;
+let currentPhotoArea = null;
+let _saveTimer = null;
+let _dataMap = null;
+
+// === DEFAULT INGREDIENTS ===
+const defaultIngredients = {
+    breakfast: ['Bread','Egg','Avocado','Bacon','Leafy Greens','Banana','Walnut','Honey'],
+    lunch: ['Beef','Chicken','Fish','Pasta','Rice','Potato','Sweet Potato','Corn','Capsicum','Broccoli'],
+    dinner: ['Beef','Chicken','Fish','Pasta','Rice','Potato','Sweet Potato','Corn','Capsicum','Broccoli'],
+    snacks: ['Strawberries','Raspberries','Blueberries','Pistachios','Cashews','Coconut Yoghurt','Noodles']
+};
+
+// === DATA FUNCTIONS ===
+function getToday() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+}
+
+function getDefaultData(date) {
+    const emptySkin = () => ({ eyes:1,face:1,body:1,flakiness:1,dryness:1,itchiness:1,redness:1,soreness:1,appearanceAnxiety:1,depressionFatigue:1 });
+    const emptyMoist = () => ({ qv:{eyes:0,face:0,body:0},qvInt:{eyes:0,face:0,body:0} });
+    const emptySteroids = () => ({ hc:{eyes:false,face:false,body:false},advF:{eyes:false,face:false,body:false},adv:{eyes:false,face:false,body:false},eluph:{eyes:false,face:false,body:false} });
+    return {
+        date, wakeTime:null, sleepTime:null, sleepQuality:5,
+        items:[], counters:{coffeeMade:0,coffeeBought:0,alcohol:0},
+        bikeTime:0, bikeCalories:0, exercises:{},
+        skin:{ morning:emptySkin(), evening:emptySkin() },
+        creams:{ morning:{moisturiser:emptyMoist(),steroids:emptySteroids()}, evening:{moisturiser:emptyMoist(),steroids:emptySteroids()} },
+        weather:{ minTemp:'',maxTemp:'',humidity:'',rainfall:'' },
+        diet:{ meals:{breakfast:[],lunch:[],dinner:[],snacks:[]},drinks:[],triggers:{dairy:false,garlic:false,onion:false,soy:false,chilli:false,chocolate:false,caffeine:false,softDrink:false,alcohol:false,other:[]} },
+        habits:{ morningSun:false,surfing:0,walk:0,afternoonSun:false,socialise:false,meditate:0 },
+        productivity:{ lifeAdmin:0,portuguese:0,budget:0,travelPlanning:0 },
+        relaxing:{ reading:0,tv:0,videoGames:0 },
+        smokeFree:true
+    };
+}
+
+function loadDataForDate(date) {
+    const stored = localStorage.getItem(`tracker_${date}`);
+    if (stored) {
+        const d = JSON.parse(stored);
+        const def = getDefaultData(date);
+        if (!d.skin) d.skin = def.skin;
+        if (!d.creams) d.creams = def.creams;
+        if (!d.weather) d.weather = def.weather;
+        if (!d.diet) d.diet = def.diet;
+        if (!d.habits) d.habits = def.habits;
+        if (!d.productivity) d.productivity = def.productivity;
+        if (!d.relaxing) d.relaxing = def.relaxing;
+        if (d.smokeFree === undefined) d.smokeFree = true;
+        if (!d.exercises) d.exercises = {};
+        return d;
+    }
+    return getDefaultData(date);
+}
+
+function loadTodayData() { return loadDataForDate(getToday()); }
+function loadAllData() { const s = localStorage.getItem('tracker_history'); return s ? JSON.parse(s) : []; }
+
+function saveTodayData() {
+    localStorage.setItem(`tracker_${todayData.date}`, JSON.stringify(todayData));
+    updateHistory();
+    updateStreaks();
+}
+
+function saveTodayDataDebounced() {
+    localStorage.setItem(`tracker_${todayData.date}`, JSON.stringify(todayData));
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => { updateHistory(); updateStreaks(); }, 400);
+}
+
+function updateHistory() {
+    invalidateDataMap();
+    const idx = allData.findIndex(d => d.date === todayData.date);
+    if (idx >= 0) allData[idx] = {...todayData};
+    else allData.unshift({...todayData});
+    allData.sort((a,b) => new Date(b.date) - new Date(a.date));
+    localStorage.setItem('tracker_history', JSON.stringify(allData));
+}
+
+function loadCleaningData() {
+    const stored = localStorage.getItem('cleaning_data');
+    if (stored) return JSON.parse(stored);
+    const today = new Date().toISOString();
+    const data = {};
+    Object.keys(cleaningTasks).forEach(freq => {
+        data[freq] = {};
+        cleaningTasks[freq].forEach(task => { data[freq][task.id] = today; });
+    });
+    return data;
+}
+
+function saveCleaningData() { localStorage.setItem('cleaning_data', JSON.stringify(cleaningData)); }
+
+function getLastNDays(n) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const cutoff = new Date(today); cutoff.setDate(cutoff.getDate()-n+1);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return allData.filter(d => d.date >= cutoffStr);
+}
+
+// === CLEANING TASKS ===
+const cleaningTasks = {
+    weekly: [
+        {id:'wipeSurfaces',label:'Wipe Surfaces',emoji:'🧽'},
+        {id:'bedSheets',label:'Remove bed sheets, dust mite spray, vacuum mattress',emoji:'🛏️'},
+        {id:'vacuumFloor',label:'Vacuum floor',emoji:'🧹'},
+        {id:'bathMats',label:'Shake or replace bath mats',emoji:'🚿'},
+        {id:'wipeBathroom',label:'Wipe bathroom surfaces (shower and sink)',emoji:'🚰'},
+        {id:'cleanToilet',label:'Clean toilet',emoji:'🚽'},
+        {id:'sweepBalcony',label:'Sweep balcony',emoji:'🧹'}
+    ],
+    monthly: [
+        {id:'airFilter',label:'Clean air filter and dehumidifier',emoji:'💨'},
+        {id:'mopFloors',label:'Mop floors',emoji:'🧽'},
+        {id:'bathroomDeep',label:'Bathroom deep clean',emoji:'🛁'},
+        {id:'dishwasherFilter',label:'Rinse dishwasher filter',emoji:'🍽️'},
+        {id:'washingMachine',label:'Washing machine clean',emoji:'🧺'},
+        {id:'kitchenAppliances',label:'Kitchen appliances (microwave, oven)',emoji:'🍳'},
+        {id:'deskChair',label:'Clean desk chair',emoji:'💺'},
+        {id:'wardrobeDoors',label:'Wardrobe doors',emoji:'🚪'},
+        {id:'wallsHandles',label:'Walls, doors, handles, switches',emoji:'🧼'},
+        {id:'insideWardrobe',label:'Inside of wardrobe',emoji:'👔'},
+        {id:'spiderwebs',label:'Spiderwebs on balcony',emoji:'🕸️'},
+        {id:'balconyBalustrade',label:'Balcony balustrade',emoji:'🏢'},
+        {id:'ceilingFan',label:'Wipe ceiling fan',emoji:'💨'},
+        {id:'shutters',label:'Wipe shutters',emoji:'🪟'}
+    ],
+    quarterly: [
+        {id:'skirtingBoards',label:'Vacuum/wipe skirting boards',emoji:'🧹'},
+        {id:'cleanWindows',label:'Clean windows',emoji:'🪟'},
+        {id:'vacuumHidden',label:'Vacuum hard to reach places',emoji:'🧹'},
+        {id:'carInterior',label:'Clean car interior',emoji:'🚗'},
+        {id:'carExterior',label:'Wash car exterior',emoji:'🚗'},
+        {id:'sweepGarage',label:'Sweep garage',emoji:'🧹'}
+    ],
+    yearly: [
+        {id:'screenDoors',label:'Front and balcony screen doors',emoji:'🚪'},
+        {id:'washBalconyFloor',label:'Wash balcony floor',emoji:'🧽'}
+    ]
+};
+
+// === STREAKS ===
+function updateStreaks() {
+    const el = document.getElementById('sleepStreak');
+    if (!el) return;
+    let streak = 0;
+    const sorted = [...allData].sort((a,b) => new Date(b.date)-new Date(a.date));
+    for (const day of sorted) {
+        if (day.wakeTime && day.sleepTime) {
+            const [wh,wm] = day.wakeTime.split(':').map(Number);
+            const [sh,sm] = day.sleepTime.split(':').map(Number);
+            if ((wh<7||(wh===7&&wm===0))&&(sh<23||(sh===23&&sm===0))) streak++;
+            else break;
+        } else break;
+    }
+    if (streak>0) { el.textContent=`🔥 ${streak} day${streak!==1?'s':''}`; el.style.display='inline-block'; }
+    else el.style.display='none';
+}
+
+// === SLEEP QUALITY SLIDER ===
+const sleepQualityEmojis = ['😵','😫','😩','😪','😴','😌','🙂','😊','😄','✨'];
+const sleepQualityDescs = ['Awful','Very Poor','Poor','Below Average','Average','Decent','Good','Great','Excellent','Perfect'];
+
+function updateMoodTracking(type, value) {
+    if (type !== 'sleepQuality') return;
+    const val = parseInt(value);
+    const e = document.getElementById('sleepQualityEmoji');
+    const v = document.getElementById('sleepQualityValue');
+    const d = document.getElementById('sleepQualityDesc');
+    if (e) e.textContent = sleepQualityEmojis[val-1];
+    if (v) v.textContent = val;
+    if (d) d.textContent = sleepQualityDescs[val-1];
+    todayData.sleepQuality = val;
+    saveTodayDataDebounced();
+}
+
+// === SKIN SLIDERS ===
+const skinSeverityEmojis = ['😊','🙂','😐','😟','😣','😖','🔴','😤','😡','🔥'];
+
+function updateSkinSlider(period, field, value, save) {
+    const val = parseInt(value);
+    const emojiEl = document.getElementById(`skin-emoji-${period}-${field}`);
+    const valEl = document.getElementById(`skin-val-${period}-${field}`);
+    if (emojiEl) emojiEl.textContent = skinSeverityEmojis[val-1];
+    if (valEl) valEl.textContent = val;
+    if (!todayData.skin) todayData.skin = {morning:{},evening:{}};
+    if (!todayData.skin[period]) todayData.skin[period] = {};
+    todayData.skin[period][field] = val;
+    if (save !== false) saveTodayDataDebounced();
+}
+
+function toggleSkinPeriod(period, e) {
+    if (e) e.stopPropagation();
+    document.getElementById('skinMorningPanel').style.display = period==='morning' ? '' : 'none';
+    document.getElementById('skinEveningPanel').style.display = period==='evening' ? '' : 'none';
+    document.getElementById('skinToggleMorning').classList.toggle('active', period==='morning');
+    document.getElementById('skinToggleEvening').classList.toggle('active', period==='evening');
+}
+
+// === CREAMS ===
+function toggleCreamPeriod(period) {
+    document.getElementById('creamMorningPanel').style.display = period==='morning' ? '' : 'none';
+    document.getElementById('creamEveningPanel').style.display = period==='evening' ? '' : 'none';
+    document.getElementById('creamToggleMorning').classList.toggle('active', period==='morning');
+    document.getElementById('creamToggleEvening').classList.toggle('active', period==='evening');
+}
+
+function incrementCream(period, type, area) {
+    if (!todayData.creams) todayData.creams = getDefaultData(todayData.date).creams;
+    todayData.creams[period].moisturiser[type][area] = (todayData.creams[period].moisturiser[type][area]||0)+1;
+    const el = document.getElementById(`cream-count-${period}-${type}-${area}`);
+    if (el) el.textContent = todayData.creams[period].moisturiser[type][area];
+    saveTodayData();
+}
+
+function toggleSteroid(period, cream, area) {
+    if (!todayData.creams) todayData.creams = getDefaultData(todayData.date).creams;
+    const el = document.getElementById(`steroid-${period}-${cream}-${area}`);
+    todayData.creams[period].steroids[cream][area] = el ? el.checked : false;
+    saveTodayData();
+}
+
+// === WEATHER ===
+function saveWeather() {
+    if (!todayData.weather) todayData.weather = {};
+    ['minTemp','maxTemp','humidity','rainfall'].forEach(f => {
+        const el = document.getElementById(`weather-${f}`);
+        todayData.weather[f] = el ? el.value : '';
+    });
+    saveTodayDataDebounced();
+}
+
+// === DIET ===
+function getIngredients(meal) {
+    const custom = JSON.parse(localStorage.getItem('customIngredients')||'{}');
+    return [...(defaultIngredients[meal]||[]),...(custom[meal]||[])];
+}
+
+function populateIngredientDropdowns() {
+    ['breakfast','lunch','dinner','snacks'].forEach(meal => {
+        const sel = document.getElementById(`sel-${meal}`);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Select ingredient...</option>' + getIngredients(meal).map(i=>`<option value="${i}">${i}</option>`).join('');
+    });
+}
+
+function addIngredient(meal) {
+    const sel = document.getElementById(`sel-${meal}`);
+    const txt = document.getElementById(`txt-${meal}`);
+    const value = ((sel&&sel.value)||(txt&&txt.value)||'').trim();
+    if (!value) return;
+    if (!todayData.diet.meals[meal]) todayData.diet.meals[meal] = [];
+    todayData.diet.meals[meal].push(value);
+    if (sel) sel.value=''; if (txt) txt.value='';
+    renderChips(meal); saveTodayData();
+}
+
+function removeIngredient(meal, index) {
+    todayData.diet.meals[meal].splice(index,1); renderChips(meal); saveTodayData();
+}
+
+function renderChips(meal) {
+    const c = document.getElementById(`chips-${meal}`);
+    if (!c) return;
+    c.innerHTML = (todayData.diet.meals[meal]||[]).map((item,i)=>`<span class="chip">${item}<button class="chip-del" onclick="removeIngredient('${meal}',${i})">×</button></span>`).join('');
+}
+
+function saveCustomIngredient(meal) {
+    const txt = document.getElementById(`txt-${meal}`);
+    if (!txt||!txt.value.trim()) return;
+    const value = txt.value.trim();
+    const custom = JSON.parse(localStorage.getItem('customIngredients')||'{}');
+    if (!custom[meal]) custom[meal]=[];
+    if (!custom[meal].includes(value)&&!defaultIngredients[meal]?.includes(value)) {
+        custom[meal].push(value);
+        localStorage.setItem('customIngredients',JSON.stringify(custom));
+        populateIngredientDropdowns();
+        alert(`"${value}" saved to ${meal} list`);
+    }
+}
+
+function addDrink() {
+    const txt = document.getElementById('txt-drinks');
+    const value = txt ? txt.value.trim() : '';
+    if (!value) return;
+    if (!todayData.diet.drinks) todayData.diet.drinks=[];
+    todayData.diet.drinks.push(value); txt.value='';
+    renderDrinkChips(); saveTodayData();
+}
+
+function removeDrink(index) { todayData.diet.drinks.splice(index,1); renderDrinkChips(); saveTodayData(); }
+
+function renderDrinkChips() {
+    const c = document.getElementById('chips-drinks');
+    if (!c) return;
+    c.innerHTML = (todayData.diet.drinks||[]).map((item,i)=>`<span class="chip">${item}<button class="chip-del" onclick="removeDrink(${i})">×</button></span>`).join('');
+}
+
+function toggleTrigger(trigger) {
+    todayData.diet.triggers[trigger] = !todayData.diet.triggers[trigger];
+    const item = document.getElementById(`trigitem-${trigger}`);
+    if (item) item.classList.toggle('triggered', todayData.diet.triggers[trigger]);
+    saveTodayData();
+}
+
+function addOtherTrigger() {
+    const txt = document.getElementById('txt-other-trigger');
+    const value = txt ? txt.value.trim() : '';
+    if (!value) return;
+    if (!todayData.diet.triggers.other) todayData.diet.triggers.other=[];
+    todayData.diet.triggers.other.push(value); txt.value='';
+    renderOtherTriggerChips(); saveTodayData();
+}
+
+function removeOtherTrigger(index) { todayData.diet.triggers.other.splice(index,1); renderOtherTriggerChips(); saveTodayData(); }
+
+function renderOtherTriggerChips() {
+    const c = document.getElementById('chips-other-trigger');
+    if (!c) return;
+    c.innerHTML = (todayData.diet.triggers.other||[]).map((item,i)=>`<span class="chip">${item}<button class="chip-del" onclick="removeOtherTrigger(${i})">×</button></span>`).join('');
+}
+
+// === HABITS & DURATION ===
+function getDurationValue(activity) {
+    if (['surfing','walk','meditate'].includes(activity)) return todayData.habits[activity]||0;
+    if (['lifeAdmin','portuguese','budget','travelPlanning'].includes(activity)) return todayData.productivity[activity]||0;
+    if (['reading','tv','videoGames'].includes(activity)) return todayData.relaxing[activity]||0;
+    return 0;
+}
+
+function setDurationValue(activity, val) {
+    if (['surfing','walk','meditate'].includes(activity)) todayData.habits[activity]=val;
+    else if (['lifeAdmin','portuguese','budget','travelPlanning'].includes(activity)) todayData.productivity[activity]=val;
+    else if (['reading','tv','videoGames'].includes(activity)) todayData.relaxing[activity]=val;
+}
+
+function updateDurationDisplay(activity) {
+    const mins = getDurationValue(activity);
+    const el = document.getElementById(`dur-total-${activity}`);
+    if (el) el.textContent = mins>=60 ? `${Math.floor(mins/60)}h${mins%60>0?' '+mins%60+'m':''}` : `${mins} min`;
+}
+
+function addDuration(activity, minutes) {
+    setDurationValue(activity, getDurationValue(activity)+minutes);
+    updateDurationDisplay(activity);
+    if (['surfing','walk','meditate'].includes(activity)) {
+        const item = document.getElementById(`item-${activity}`);
+        if (item) { item.classList.add('checked'); const ch=item.querySelector('.checkmark'); if(ch) ch.textContent='✓'; }
+    }
+    saveTodayData();
+}
+
+function resetDuration(activity) {
+    setDurationValue(activity,0);
+    updateDurationDisplay(activity);
+    if (['surfing','walk','meditate'].includes(activity)) {
+        const item = document.getElementById(`item-${activity}`);
+        if (item) { item.classList.remove('checked'); const ch=item.querySelector('.checkmark'); if(ch) ch.textContent=''; }
+    }
+    saveTodayData();
+}
+
+function toggleHabit(activity) {
+    if (['surfing','walk','meditate'].includes(activity)) {
+        if (getDurationValue(activity)>0) resetDuration(activity);
+        return;
+    }
+    const item = document.getElementById(`item-${activity}`);
+    if (!item) return;
+    const checked = item.classList.contains('checked');
+    item.classList.toggle('checked',!checked);
+    const ch = item.querySelector('.checkmark');
+    if (ch) ch.textContent = !checked ? '✓' : '';
+    todayData.habits[activity] = !checked;
+    saveTodayData();
+}
+
+function toggleSmokeFree() {
+    todayData.smokeFree = !todayData.smokeFree;
+    const item = document.getElementById('item-smokeFree');
+    const check = document.getElementById('smokeFreeCheck');
+    if (item) item.classList.toggle('checked', todayData.smokeFree);
+    if (check) check.textContent = todayData.smokeFree ? '✓' : '';
+    saveTodayData(); updateSmokeFreeStreak();
+}
+
+function updateSmokeFreeStreak() {
+    const el = document.getElementById('smokeFreeStreak');
+    if (!el) return;
+    let streak = 0;
+    const sorted = [...allData].sort((a,b) => new Date(b.date)-new Date(a.date));
+    for (const d of sorted) { if (d.smokeFree!==false) streak++; else break; }
+    el.textContent = streak>1 ? `🔥 ${streak} day streak!` : streak===1 ? '✓ Smoke-free today' : '';
+}
+
+// === PHOTOS (IndexedDB) ===
+function openPhotoDB() {
+    return new Promise((resolve,reject) => {
+        const req = indexedDB.open('skinTrackerPhotos',1);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('photos')) {
+                const store = db.createObjectStore('photos',{keyPath:'id',autoIncrement:true});
+                store.createIndex('date','date',{unique:false});
+            }
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+    });
+}
+
+function capturePhoto(area) { currentPhotoArea=area; document.getElementById('photoInput').click(); }
+
+function handlePhotoCapture(event) {
+    const file = event.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
+        try {
+            const db = await openPhotoDB();
+            const tx = db.transaction('photos','readwrite');
+            tx.objectStore('photos').add({date:currentEditDate||getToday(),time:timeStr,area:currentPhotoArea,dataUrl:e.target.result});
+            tx.oncomplete = () => loadPhotoGallery();
+        } catch(err) { alert('Could not save photo. Storage may be full.'); }
+    };
+    reader.readAsDataURL(file);
+    event.target.value='';
+}
+
+async function loadPhotoGallery() {
+    try {
+        const db = await openPhotoDB();
+        const tx = db.transaction('photos','readonly');
+        const req = tx.objectStore('photos').getAll();
+        req.onsuccess = e => renderPhotoGallery(e.target.result);
+    } catch(err) { console.error('Photo load error:',err); }
+}
+
+function renderPhotoGallery(photos) {
+    const container = document.getElementById('photoGallery'); if (!container) return;
+    if (!photos||photos.length===0) { container.innerHTML='<p style="color:#999;font-size:13px;text-align:center;padding:20px;">No photos yet.</p>'; return; }
+    const byDate = {};
+    photos.forEach(p => { if (!byDate[p.date]) byDate[p.date]=[]; byDate[p.date].push(p); });
+    container.innerHTML = Object.keys(byDate).sort((a,b)=>b.localeCompare(a)).map(date => {
+        const label = new Date(date+'T00:00:00').toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'});
+        const thumbs = byDate[date].map(p=>`<div class="photo-thumb"><img src="${p.dataUrl}" alt="${p.area}"><div class="photo-time">${p.area==='face'?'😊':'🧴'} ${p.time}</div><button class="photo-del" onclick="deletePhoto(${p.id})">×</button></div>`).join('');
+        return `<div class="photo-gallery-group"><h4>${label}</h4><div class="photo-thumbs">${thumbs}</div></div>`;
+    }).join('');
+}
+
+async function deletePhoto(id) {
+    if (!confirm('Delete this photo?')) return;
+    try {
+        const db = await openPhotoDB();
+        const tx = db.transaction('photos','readwrite');
+        tx.objectStore('photos').delete(id);
+        tx.oncomplete = () => loadPhotoGallery();
+    } catch(err) { console.error('Photo delete error:',err); }
+}
+
+// === SLEEP BUTTONS ===
+function logWakeTime() {
+    const time = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
+    todayData.wakeTime=time; saveTodayData();
+    document.getElementById('wakeBtn').classList.add('logged');
+    document.getElementById('wakeBtnText').textContent='✅ Out of Bed';
+    document.getElementById('wakeTime').textContent=`at ${time}`;
+    document.getElementById('wakeEdit').style.display='block';
+}
+
+function logSleepTime() {
+    const time = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
+    todayData.sleepTime=time; saveTodayData();
+    document.getElementById('sleepBtn').classList.add('logged');
+    document.getElementById('sleepBtnText').textContent='✅ In Bed';
+    document.getElementById('sleepTime').textContent=`at ${time}`;
+    document.getElementById('sleepEdit').style.display='block';
+}
+
+function editWakeTime() { showTimePicker('wake'); }
+function editSleepTime() { showTimePicker('sleep'); }
+
+// === TIME PICKER ===
+function initTimePicker() {
+    const hWheel=document.getElementById('hourWheel'), mWheel=document.getElementById('minuteWheel');
+    for (let i=0;i<24;i++) { const d=document.createElement('div'); d.className='time-option'; d.textContent=String(i).padStart(2,'0'); d.dataset.value=i; hWheel.appendChild(d); }
+    for (let i=0;i<60;i++) { const d=document.createElement('div'); d.className='time-option'; d.textContent=String(i).padStart(2,'0'); d.dataset.value=i; mWheel.appendChild(d); }
+}
+
+function showTimePicker(type) {
+    currentTimePickerType=type;
+    document.getElementById('timePickerTitle').textContent=type==='wake'?'Set Wake Time':'Set Bed Time';
+    document.getElementById('timePickerModal').classList.add('active');
+    const existing = type==='wake' ? todayData.wakeTime : todayData.sleepTime;
+    if (existing) { const [h,m]=existing.split(':').map(Number); scrollToTime(h,m); }
+    else { const n=new Date(); scrollToTime(n.getHours(),n.getMinutes()); }
+}
+
+function scrollToTime(h,m) { document.getElementById('hourWheel').scrollTop=h*40; document.getElementById('minuteWheel').scrollTop=m*40; }
+
+function getSelectedTime() {
+    return { hour:Math.max(0,Math.min(23,Math.round(document.getElementById('hourWheel').scrollTop/40))), minute:Math.max(0,Math.min(59,Math.round(document.getElementById('minuteWheel').scrollTop/40))) };
+}
+
+function confirmTime() {
+    const {hour,minute}=getSelectedTime();
+    const ts=`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+    if (currentTimePickerType==='wake') {
+        todayData.wakeTime=ts;
+        document.getElementById('wakeBtn').classList.add('logged');
+        document.getElementById('wakeBtnText').textContent='✅ Out of Bed';
+        document.getElementById('wakeTime').textContent=`at ${ts}`;
+        document.getElementById('wakeEdit').style.display='block';
+    } else {
+        todayData.sleepTime=ts;
+        document.getElementById('sleepBtn').classList.add('logged');
+        document.getElementById('sleepBtnText').textContent='✅ In Bed';
+        document.getElementById('sleepTime').textContent=`at ${ts}`;
+        document.getElementById('sleepEdit').style.display='block';
+    }
+    saveTodayData(); closeTimePicker();
+}
+
+function closeTimePicker() { document.getElementById('timePickerModal').classList.remove('active'); }
+
+// === DATE NAVIGATION ===
+function loadDateData() {
+    const sel=document.getElementById('dateInput').value; if (!sel) return;
+    currentEditDate=sel;
+    todayData=loadDataForDate(sel);
+    document.getElementById('currentDate').textContent=new Date(sel+'T00:00:00').toLocaleDateString('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    restoreUI();
+    const tb=document.getElementById('todayBtn'); if (tb) tb.style.background=sel===getToday()?'#4ade80':'#7c6fe0';
+}
+
+function goToToday() { currentEditDate=getToday(); document.getElementById('dateInput').value=currentEditDate; loadDateData(); }
+
+// === RESTORE UI ===
+function restoreUI() {
+    // Sleep buttons
+    const wb=document.getElementById('wakeBtn');
+    if (wb) {
+        if (todayData.wakeTime) {
+            wb.classList.add('logged'); document.getElementById('wakeBtnText').textContent='✅ Out of Bed';
+            document.getElementById('wakeTime').textContent=`at ${todayData.wakeTime}`; document.getElementById('wakeEdit').style.display='block';
+        } else {
+            wb.classList.remove('logged'); document.getElementById('wakeBtnText').textContent='☀️ Out of Bed';
+            document.getElementById('wakeTime').textContent=''; document.getElementById('wakeEdit').style.display='none';
+        }
+    }
+    const sb=document.getElementById('sleepBtn');
+    if (sb) {
+        if (todayData.sleepTime) {
+            sb.classList.add('logged'); document.getElementById('sleepBtnText').textContent='✅ In Bed';
+            document.getElementById('sleepTime').textContent=`at ${todayData.sleepTime}`; document.getElementById('sleepEdit').style.display='block';
+        } else {
+            sb.classList.remove('logged'); document.getElementById('sleepBtnText').textContent='🌙 Going to Bed';
+            document.getElementById('sleepTime').textContent=''; document.getElementById('sleepEdit').style.display='none';
+        }
+    }
+    // Sleep quality
+    const sqSlider=document.getElementById('sleepQualitySlider');
+    if (sqSlider) { sqSlider.value=todayData.sleepQuality||5; updateMoodTracking('sleepQuality',todayData.sleepQuality||5); }
+    // Skin sliders
+    ['morning','evening'].forEach(period => {
+        const s=todayData.skin?.[period]||{};
+        ['eyes','face','body','flakiness','dryness','itchiness','redness','soreness','appearanceAnxiety','depressionFatigue'].forEach(field => {
+            const val=s[field]||1;
+            const slider=document.getElementById(`skin-${period}-${field}`);
+            if (slider) slider.value=val;
+            updateSkinSlider(period,field,val,false);
+        });
+    });
+    // Cream counts
+    ['morning','evening'].forEach(period => {
+        const creams=todayData.creams?.[period]; if (!creams) return;
+        ['qv','qvInt'].forEach(type => ['eyes','face','body'].forEach(area => {
+            const el=document.getElementById(`cream-count-${period}-${type}-${area}`);
+            if (el) el.textContent=creams.moisturiser?.[type]?.[area]||0;
+        }));
+        ['hc','advF','adv','eluph'].forEach(cream => ['eyes','face','body'].forEach(area => {
+            const el=document.getElementById(`steroid-${period}-${cream}-${area}`);
+            if (el) el.checked=creams.steroids?.[cream]?.[area]||false;
+        }));
+    });
+    // Weather
+    ['minTemp','maxTemp','humidity','rainfall'].forEach(f => { const el=document.getElementById(`weather-${f}`); if (el) el.value=todayData.weather?.[f]||''; });
+    // Diet
+    ['breakfast','lunch','dinner','snacks'].forEach(meal => renderChips(meal));
+    renderDrinkChips(); renderOtherTriggerChips();
+    ['dairy','garlic','onion','soy','chilli','chocolate','caffeine','softDrink','alcohol'].forEach(t => {
+        const cb=document.getElementById(`trig-${t}`), item=document.getElementById(`trigitem-${t}`);
+        const val=todayData.diet?.triggers?.[t]||false;
+        if (cb) cb.checked=val; if (item) item.classList.toggle('triggered',val);
+    });
+    // Habits - boolean
+    ['morningSun','afternoonSun','socialise'].forEach(h => {
+        const item=document.getElementById(`item-${h}`); if (!item) return;
+        const val=todayData.habits?.[h]||false;
+        item.classList.toggle('checked',val);
+        const ch=item.querySelector('.checkmark'); if (ch) ch.textContent=val?'✓':'';
+    });
+    // Habits - duration
+    ['surfing','walk','meditate'].forEach(h => {
+        const mins=todayData.habits?.[h]||0;
+        const item=document.getElementById(`item-${h}`);
+        if (item) { item.classList.toggle('checked',mins>0); const ch=item.querySelector('.checkmark'); if (ch) ch.textContent=mins>0?'✓':''; }
+        updateDurationDisplay(h);
+    });
+    ['lifeAdmin','portuguese','budget','travelPlanning'].forEach(a=>updateDurationDisplay(a));
+    ['reading','tv','videoGames'].forEach(a=>updateDurationDisplay(a));
+    // Smoke-free
+    const sfItem=document.getElementById('item-smokeFree'), sfCheck=document.getElementById('smokeFreeCheck');
+    const isSmokeFree=todayData.smokeFree!==false;
+    if (sfItem) sfItem.classList.toggle('checked',isSmokeFree);
+    if (sfCheck) sfCheck.textContent=isSmokeFree?'✓':'';
+    updateSmokeFreeStreak();
+    // Exercise
+    const bt=document.getElementById('bikeTime'); if (bt) bt.value=todayData.bikeTime||0;
+    const bc=document.getElementById('bikeCalories'); if (bc) bc.value=todayData.bikeCalories||0;
+    renderWeightsExercises();
+    loadPhotoGallery();
+    populateIngredientDropdowns();
+    updateStreaks();
+}
+
+// === SECTION TOGGLE ===
+function toggleSection(section, e) {
+    const content=document.getElementById(`section-${section}`), header=e.currentTarget;
+    if (content.classList.contains('expanded')) { content.classList.remove('expanded'); header.classList.remove('expanded'); }
+    else { content.classList.add('expanded'); header.classList.add('expanded'); if (['weekly','monthly','quarterly','yearly'].includes(section)) renderCleaningSection(section); }
+}
+
+function toggleCompleted(section) {
+    showCompletedSections[section]=!showCompletedSections[section];
+    document.getElementById(`toggle-${section}-text`).textContent=showCompletedSections[section]?'Show Less':'Show More';
+    renderCleaningSection(section);
+}
+
+// === TAB & MODE SWITCHING ===
+function switchTab(tab, e) {
+    document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));
+    if (e) e.currentTarget.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    document.getElementById(`${tab}-tab`).classList.add('active');
+    if (tab==='photo') loadPhotoGallery();
+    if (tab==='cleaning') { ['weekly','monthly','quarterly','yearly'].forEach(s => { const h=document.querySelector(`[onclick*="toggleSection('${s}')"]`); if (h&&h.classList.contains('expanded')) renderCleaningSection(s); }); }
+}
+
+function switchMode(mode) {
+    document.getElementById('entryMode').style.display=mode==='entry'?'':'none';
+    document.getElementById('statsMode').style.display=mode==='stats'?'':'none';
+    document.getElementById('modeBtnEntry').classList.toggle('active',mode==='entry');
+    document.getElementById('modeBtnStats').classList.toggle('active',mode==='stats');
+    if (mode==='stats') { renderHistory(); renderStats(); }
+}
+
+// === EXERCISE ===
+const exercises = {
+    push:[{id:'inclinePress',name:'Incline Press Machine',emoji:'🏋️',weighted:true},{id:'fly',name:'Fly Machine',emoji:'🏋️',weighted:true},{id:'inclineDB',name:'Incline Dumbbell Press',emoji:'🏋️‍♂️',weighted:true},{id:'inclineDBShoulderPress',name:'Incline Dumbbell Shoulder Press',emoji:'🏋️‍♂️',weighted:true},{id:'shoulderPress',name:'Shoulder Press Machine',emoji:'🏋️',weighted:true},{id:'tricep',name:'Overhead Tricep Extension',emoji:'💪',weighted:true}],
+    pull:[{id:'pullups',name:'Pull Ups',emoji:'💪',weighted:false},{id:'cableRows',name:'Cable Rows',emoji:'🏋️',weighted:true},{id:'latPull',name:'Lat Pull Down',emoji:'🏋️',weighted:true},{id:'latAround',name:'Cable Lat Pull Around',emoji:'🏋️',weighted:true},{id:'facePull',name:'Face Pull',emoji:'🏋️',weighted:true},{id:'reverseFly',name:'Reverse Fly Machine',emoji:'🏋️',weighted:true},{id:'inclineDBCurls',name:'Incline Dumbbell Curls',emoji:'💪',weighted:true}],
+    legs:[{id:'hamCurl',name:'Hamstring Curl',emoji:'🏋️',weighted:true},{id:'quadExt',name:'Quad Extension',emoji:'🏋️',weighted:true}],
+    other:[{id:'cableCrunch',name:'Cable Crunch',emoji:'🏋️',weighted:true},{id:'legRaise',name:'Hanging Leg Raise',emoji:'💪',weighted:false},{id:'latRaise',name:'Cable Lat Raise',emoji:'🏋️',weighted:true}]
+};
+
+function saveExerciseData() { todayData.bikeTime=parseInt(document.getElementById('bikeTime').value)||0; todayData.bikeCalories=parseInt(document.getElementById('bikeCalories').value)||0; saveTodayDataDebounced(); }
+
+function renderWeightsExercises() {
+    const container=document.getElementById('weightsContainer'); if (!container) return;
+    if (!todayData.exercises) todayData.exercises={};
+    const groups={push:'💪 Push',pull:'🤸 Pull',legs:'🦵 Legs',other:'🎯 Other'};
+    container.innerHTML = Object.keys(groups).map(groupKey => {
+        const exRows = exercises[groupKey].map(ex => {
+            const sets=todayData.exercises[ex.id]||[], checked=sets.length>0;
+            const setRows = sets.length===0 ? renderSetRow(ex.id,0,ex.weighted?{weight:0,reps:0}:{reps:0},ex.weighted) : sets.map((set,idx)=>renderSetRow(ex.id,idx,set,ex.weighted)).join('');
+            return `<div class="ex-item"><div class="ex-checkbox" onclick="toggleExItem('${ex.id}',event)"><input type="checkbox" id="cb-${ex.id}" ${checked?'checked':''}><label>${ex.emoji} ${ex.name}${!ex.weighted?' (reps only)':''}</label></div><div class="ex-details ${checked?'active':''}" id="ex-${ex.id}"><div id="sets-${ex.id}">${setRows}</div><button class="ex-add-btn" onclick="addExSet('${ex.id}',${ex.weighted})">+ Add Set</button>${renderExStats(ex.id)}</div></div>`;
+        }).join('');
+        return `<div class="ex-group"><div class="ex-group-header" onclick="toggleExGroup('${groupKey}')"><span>${groups[groupKey]}</span><span id="toggle-${groupKey}">▼</span></div><div id="group-${groupKey}">${exRows}</div></div>`;
+    }).join('');
+}
+
+function renderSetRow(exId,idx,set,weighted) {
+    if (weighted) return `<div class="ex-set-row"><div class="ex-set-label">Set ${idx+1}</div><div class="ex-input-group"><button onclick="adjEx('${exId}',${idx},'weight',-2.5)">−</button><input type="number" value="${set.weight||0}" step="2.5" onchange="updateExSet('${exId}',${idx},'weight',this.value)"><span class="unit">kg</span><button onclick="adjEx('${exId}',${idx},'weight',2.5)">+</button></div><div class="ex-input-group"><button onclick="adjEx('${exId}',${idx},'reps',-1)">−</button><input type="number" value="${set.reps||0}" onchange="updateExSet('${exId}',${idx},'reps',this.value)"><span class="unit">rep</span><button onclick="adjEx('${exId}',${idx},'reps',1)">+</button></div><button class="ex-del-btn" onclick="delExSet('${exId}',${idx})">×</button></div>`;
+    return `<div class="ex-set-row"><div class="ex-set-label">Set ${idx+1}</div><div class="ex-input-group" style="flex:2;"><button onclick="adjEx('${exId}',${idx},'reps',-1)">−</button><input type="number" value="${set.reps||0}" style="width:60px;" onchange="updateExSet('${exId}',${idx},'reps',this.value)"><span class="unit">reps</span><button onclick="adjEx('${exId}',${idx},'reps',1)">+</button></div><button class="ex-del-btn" onclick="delExSet('${exId}',${idx})">×</button></div>`;
+}
+
+function renderExStats(exId) { return `<div class="ex-stats"><div><div class="label">Last Session</div><div class="value">${getExLastSession(exId)}</div></div><div><div class="label">Best Session</div><div class="value">${getExBestSession(exId)}</div></div></div>`; }
+function getExLastSession(exId) { for (let i=1;i<allData.length;i++) { const d=allData[i]; if (d.exercises?.[exId]?.length>0) return formatSets(d.exercises[exId]); } return '-'; }
+function getExBestSession(exId) { let best=null,bestVol=0; allData.forEach(d => { if (d.exercises?.[exId]?.length>0) { const vol=d.exercises[exId].reduce((s,x)=>s+(x.weight||0)*x.reps,0); if (vol>bestVol){bestVol=vol;best=d.exercises[exId];} } }); return best?formatSets(best):'-'; }
+function formatSets(sets) { return sets.map(s=>s.weight?`${s.weight}kg×${s.reps}`:s.reps).join(', '); }
+function toggleExGroup(group) { const c=document.getElementById(`group-${group}`),t=document.getElementById(`toggle-${group}`); if(c.style.display==='none'){c.style.display='block';t.textContent='▼';}else{c.style.display='none';t.textContent='▶';} }
+
+function toggleExItem(exId,event) {
+    if (event.target.tagName==='INPUT') event.preventDefault();
+    const cb=document.getElementById(`cb-${exId}`), willCheck=!cb.checked;
+    cb.checked=willCheck;
+    if (willCheck) {
+        if (!todayData.exercises[exId]||todayData.exercises[exId].length===0) { let w=true; Object.values(exercises).flat().forEach(ex=>{if(ex.id===exId)w=ex.weighted;}); todayData.exercises[exId]=[w?{weight:0,reps:0}:{reps:0}]; saveTodayData(); }
+        renderWeightsExercises();
+    } else { delete todayData.exercises[exId]; saveTodayData(); renderWeightsExercises(); }
+}
+
+function adjEx(exId,idx,field,delta) { if (!todayData.exercises[exId]) todayData.exercises[exId]=[]; if (!todayData.exercises[exId][idx]) todayData.exercises[exId][idx]={weight:0,reps:0}; todayData.exercises[exId][idx][field]=Math.max(0,(todayData.exercises[exId][idx][field]||0)+delta); saveTodayData(); renderWeightsExercises(); }
+function updateExSet(exId,idx,field,value) { if (!todayData.exercises[exId]) todayData.exercises[exId]=[]; if (!todayData.exercises[exId][idx]) todayData.exercises[exId][idx]={}; todayData.exercises[exId][idx][field]=parseFloat(value)||0; saveTodayData(); }
+function addExSet(exId,weighted) { if (!todayData.exercises[exId]) todayData.exercises[exId]=[]; const last=todayData.exercises[exId][todayData.exercises[exId].length-1]; todayData.exercises[exId].push(weighted?{weight:last?.weight||0,reps:last?.reps||0}:{reps:last?.reps||0}); saveTodayData(); renderWeightsExercises(); }
+function delExSet(exId,idx) { if (!todayData.exercises[exId]) return; if (todayData.exercises[exId].length<=1) return alert('Need at least one set'); todayData.exercises[exId].splice(idx,1); saveTodayData(); renderWeightsExercises(); }
+
+// === CLEANING ===
+function renderCleaningSection(section) {
+    const container=document.getElementById(`${section}-tasks`); if (!container) return;
+    const tasks=cleaningTasks[section], frequency={weekly:7,monthly:30,quarterly:90,yearly:365}[section];
+    const showThreshold={weekly:4,monthly:8,quarterly:30,yearly:90}[section], today=new Date();
+    const tasksWithStatus = tasks.map(task => {
+        const lastDone=cleaningData[section][task.id]?new Date(cleaningData[section][task.id]):null;
+        const daysSince=lastDone?Math.floor((today-lastDone)/(1000*60*60*24)):999;
+        return {...task,daysSince,daysUntilDue:frequency-daysSince};
+    }).sort((a,b)=>{
+        if (a.daysUntilDue<0&&b.daysUntilDue>=0) return -1;
+        if (b.daysUntilDue<0&&a.daysUntilDue>=0) return 1;
+        return a.daysUntilDue-b.daysUntilDue;
+    });
+    const filtered=showCompletedSections[section]?tasksWithStatus:tasksWithStatus.filter(t=>t.daysUntilDue<0||t.daysUntilDue<=showThreshold);
+    container.innerHTML=filtered.map(task=>{
+        const isOverdue=task.daysUntilDue<0;
+        const badgeText=isOverdue?`Overdue ${Math.abs(task.daysUntilDue)}d`:task.daysUntilDue===0?'Due today':`Due in ${task.daysUntilDue}d`;
+        const badgeClass=isOverdue?'overdue':task.daysUntilDue<=2?'due-soon':'due-later';
+        return `<div class="checkbox-item ${isOverdue?'overdue':''}" onclick="toggleCleaningTask('${section}','${task.id}')"><span class="emoji">${task.emoji}</span><span class="label">${task.label}</span><span class="due-badge ${badgeClass}">${badgeText}</span></div>`;
+    }).join('');
+}
+
+function toggleCleaningTask(section,taskId) { cleaningData[section][taskId]=new Date().toISOString(); saveCleaningData(); renderCleaningSection(section); triggerConfetti(); }
+function triggerConfetti() { if (typeof confetti!=='undefined') confetti({particleCount:80,spread:60,origin:{y:0.6}}); }
+
+// === HISTORY ===
+function renderHistory() {
+    const list=document.getElementById('historyList'); if (!list) return;
+    if (allData.length===0){list.innerHTML='<p style="color:#666;text-align:center;padding:20px;">No history yet - start tracking!</p>';return;}
+    list.innerHTML=allData.slice(0,14).map(d=>{
+        const date=new Date(d.date+'T00:00:00').toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'});
+        const sections=[];
+        if (d.wakeTime||d.sleepTime){const parts=[];if(d.wakeTime)parts.push(`☀️ ${d.wakeTime}`);if(d.sleepTime)parts.push(`🌙 ${d.sleepTime}`);sections.push(`<div><strong>Sleep:</strong> ${parts.join(' → ')}</div>`);}
+        if (d.skin){['morning','evening'].forEach(p=>{const s=d.skin[p];if(!s)return;const sev=(['eyes','face','body'].reduce((sum,f)=>sum+(s[f]||1),0)/3).toFixed(1);sections.push(`<div><strong>${p==='morning'?'🌅':'🌆'} Skin:</strong> Severity ${sev}/10</div>`);});}
+        const triggersHit=[];
+        if (d.diet?.triggers){['dairy','garlic','onion','soy','chilli','chocolate','caffeine','softDrink','alcohol'].forEach(t=>{if(d.diet.triggers[t])triggersHit.push(t);});if(d.diet.triggers.other?.length)triggersHit.push(...d.diet.triggers.other);}
+        if (triggersHit.length>0) sections.push(`<div><strong>⚠️ Triggers:</strong> ${triggersHit.join(', ')}</div>`);
+        return `<div class="history-item"><div class="history-date">${date}</div><div class="history-details">${sections.length>0?sections.join(''):'<div style="color:#666;">No data recorded</div>'}</div></div>`;
+    }).join('');
+}
+
+// === STATS ===
+function renderStats() {
+    const last7=getLastNDays(7);
+    const surfDays=last7.filter(d=>(d.habits?.surfing||0)>0).length;
+    const walkDays=last7.filter(d=>(d.habits?.walk||0)>0).length;
+    const sunDays=last7.filter(d=>d.habits?.morningSun).length;
+    document.getElementById('surfingCount').textContent=`${surfDays}/7`; document.getElementById('surfingProgress').style.width=`${(surfDays/7)*100}%`;
+    document.getElementById('walkCount').textContent=`${walkDays}/7`; document.getElementById('walkProgress').style.width=`${(walkDays/7)*100}%`;
+    document.getElementById('morningSunCount').textContent=`${sunDays}/7`; document.getElementById('morningSunProgress').style.width=`${(sunDays/7)*100}%`;
+    const lifeAdminMins=last7.reduce((s,d)=>s+(d.productivity?.lifeAdmin||0),0);
+    const readingMins=last7.reduce((s,d)=>s+(d.relaxing?.reading||0),0);
+    const portugueseMins=last7.reduce((s,d)=>s+(d.productivity?.portuguese||0),0);
+    const videoGamesMins=last7.reduce((s,d)=>s+(d.relaxing?.videoGames||0),0);
+    const lifeAdminH=(lifeAdminMins/60).toFixed(1);
+    document.getElementById('lifeAdminTime').textContent=`${lifeAdminH}h / 3.5h`; document.getElementById('lifeAdminProgress').style.width=`${Math.min((lifeAdminH/3.5)*100,100)}%`;
+    document.getElementById('readingTime').textContent=`${readingMins}m / 70m`; document.getElementById('readingProgress').style.width=`${Math.min((readingMins/70)*100,100)}%`;
+    document.getElementById('portugueseTime').textContent=`${portugueseMins}m / 70m`; document.getElementById('portugueseProgress').style.width=`${Math.min((portugueseMins/70)*100,100)}%`;
+    const videoGamesH=(videoGamesMins/60).toFixed(1);
+    document.getElementById('videoGamesTime').textContent=`${videoGamesH}h / 2.3h`; document.getElementById('videoGamesProgress').style.width=`${Math.min((videoGamesH/2.3)*100,100)}%`;
+    const chocDays=last7.filter(d=>d.diet?.triggers?.chocolate).length;
+    const alcDays=last7.filter(d=>d.diet?.triggers?.alcohol).length;
+    const caffDays=last7.filter(d=>d.diet?.triggers?.caffeine).length;
+    document.getElementById('chocolateDays').textContent=chocDays; document.getElementById('chocolateProgress').style.width=`${(chocDays/7)*100}%`;
+    document.getElementById('alcoholDays').textContent=alcDays; document.getElementById('alcoholProgress').style.width=`${(alcDays/7)*100}%`;
+    document.getElementById('caffeineDays').textContent=caffDays; document.getElementById('caffeineProgress').style.width=`${(caffDays/7)*100}%`;
+    renderSleepChart(); renderSkinChart(); initializeScrollTracks();
+}
+
+// === CHART HELPERS ===
+function getDataMap() { if (!_dataMap){_dataMap=new Map();allData.forEach(d=>_dataMap.set(d.date,d));} return _dataMap; }
+function invalidateDataMap() { _dataMap=null; }
+
+function getCompleteDateRange() {
+    const today=new Date(); today.setHours(0,0,0,0);
+    let daysBack=90;
+    if (allData.length>0){const sorted=[...allData].sort((a,b)=>a.date.localeCompare(b.date));const earliest=new Date(sorted[0].date+'T00:00:00');daysBack=Math.min(90,Math.floor((today-earliest)/(1000*60*60*24))+1);}
+    const allLabels=[],allDateStrs=[];
+    for (let i=daysBack-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const ds=d.toISOString().split('T')[0];allDateStrs.push(ds);allLabels.push(d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate()+' '+d.toLocaleDateString('en-AU',{month:'short'}));}
+    totalDataDays=daysBack;
+    return {allLabels,allDateStrs,totalDays:daysBack};
+}
+
+function getWindowedData(windowStart) { const {allLabels,allDateStrs}=getCompleteDateRange(),start=Math.max(0,windowStart),end=Math.min(allLabels.length,start+WINDOW_SIZE); return {labels:allLabels.slice(start,end),dateStrs:allDateStrs.slice(start,end)}; }
+
+function initializeScrollTracks() {
+    const maxScroll=Math.max(0,totalDataDays-WINDOW_SIZE),trackWidth=maxScroll*30+300;
+    ['skin','sleep'].forEach(type=>{const t=document.getElementById(`${type}ScrollTrack`),c=document.getElementById(`${type}ScrollContainer`);if(t)t.style.width=trackWidth+'px';if(c)c.scrollLeft=maxScroll*30;});
+}
+
+function updateChartWindow(type) { const c=document.getElementById(type+'ScrollContainer');if(!c)return;const ws=Math.floor(c.scrollLeft/30);if(type==='skin'&&ws!==skinWindowStart){skinWindowStart=ws;renderSkinChart();}else if(type==='sleep'&&ws!==sleepWindowStart){sleepWindowStart=ws;renderSleepChart();} }
+
+function initChartTouchPan(canvasId,scrollContainerId) {
+    const canvas=document.getElementById(canvasId),sc=document.getElementById(scrollContainerId);if(!canvas||!sc)return;
+    let tx=null;
+    canvas.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:false});
+    canvas.addEventListener('touchmove',e=>{if(tx===null)return;e.preventDefault();const dx=e.touches[0].clientX-tx;tx=e.touches[0].clientX;sc.scrollLeft-=dx;},{passive:false});
+    canvas.addEventListener('touchend',()=>{tx=null;},{passive:false});
+}
+
+function gapSegmentStyle(ctx) { return (ctx.p0.parsed.y===null||ctx.p1.parsed.y===null)?'rgba(0,0,0,0)':undefined; }
+
+// === SLEEP CHART ===
+function renderSleepChart() {
+    const {labels,dateStrs}=getWindowedData(sleepWindowStart);
+    const wakeData=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.wakeTime)return null;const[h,m]=e.wakeTime.split(':').map(Number);return h+m/60;});
+    const sleepData=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.sleepTime)return null;const[h,m]=e.sleepTime.split(':').map(Number);let hr=h+m/60;if(h>=0&&h<5)hr+=24;return hr;});
+    if (sleepChart){sleepChart.data.labels=labels;sleepChart.data.datasets[0].data=wakeData;sleepChart.data.datasets[1].data=sleepData;sleepChart.update('none');return;}
+    sleepChart=new Chart(document.getElementById('sleepChart'),{type:'line',data:{labels,datasets:[
+        {label:'Wake Time',data:wakeData,borderColor:'#ff9800',backgroundColor:'rgba(255,152,0,0.1)',pointBackgroundColor:'#ff9800',pointRadius:ctx=>ctx.parsed.y!==null?5:0,tension:0.2,spanGaps:false,segment:{borderColor:gapSegmentStyle}},
+        {label:'Bed Time',data:sleepData,borderColor:'#7c6fe0',backgroundColor:'rgba(124,111,224,0.1)',pointBackgroundColor:'#7c6fe0',pointRadius:ctx=>ctx.parsed.y!==null?5:0,tension:0.2,spanGaps:false,segment:{borderColor:gapSegmentStyle}}
+    ]},options:{animation:false,responsive:true,maintainAspectRatio:false,
+        scales:{y:{min:5,max:28,ticks:{stepSize:1,callback:v=>`${Math.floor(v%24)}:00`},grid:{color:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?'rgba(255,0,0,0.4)':'rgba(0,0,0,0.08)',lineWidth:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?2:1,borderDash:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?[5,5]:[]}},x:{ticks:{autoSkip:false,maxRotation:45,font:{size:9}},grid:{display:false}}},
+        plugins:{legend:{labels:{usePointStyle:true},onClick:null},tooltip:{callbacks:{label:function(c){if(c.parsed.y===null)return null;const v=c.parsed.y,h=Math.floor(v%24),m=Math.round((v-Math.floor(v))*60);return `${c.dataset.label}: ${h}:${String(m).padStart(2,'0')}`;}}}}
+    }});
+}
+
+// === SKIN CHART ===
+function renderSkinChart() {
+    const {labels,dateStrs}=getWindowedData(skinWindowStart);
+    const mornSev=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.morning)return null;return parseFloat((['eyes','face','body'].reduce((s,f)=>s+(e.skin.morning[f]||1),0)/3).toFixed(1));});
+    const eveSev=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.evening)return null;return parseFloat((['eyes','face','body'].reduce((s,f)=>s+(e.skin.evening[f]||1),0)/3).toFixed(1));});
+    const symptomData=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.morning)return null;return parseFloat((['flakiness','dryness','itchiness','redness','soreness'].reduce((s,f)=>s+(e.skin.morning[f]||1),0)/5).toFixed(1));});
+    if (skinChart){skinChart.data.labels=labels;skinChart.data.datasets[0].data=mornSev;skinChart.data.datasets[1].data=eveSev;skinChart.data.datasets[2].data=symptomData;skinChart.update('none');return;}
+    skinChart=new Chart(document.getElementById('skinChart'),{type:'line',data:{labels,datasets:[
+        {label:'🌅 Morning Severity',data:mornSev,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#f97316',spanGaps:false,segment:{borderColor:gapSegmentStyle}},
+        {label:'🌆 Evening Severity',data:eveSev,borderColor:'#7c6fe0',backgroundColor:'rgba(124,111,224,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#7c6fe0',spanGaps:false,segment:{borderColor:gapSegmentStyle}},
+        {label:'😣 Symptoms (AM)',data:symptomData,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#ef4444',spanGaps:false,segment:{borderColor:gapSegmentStyle}}
+    ]},options:{animation:false,responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,padding:12,font:{size:12,weight:'600'}}}},
+        scales:{y:{min:1,max:10,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,0.08)'}},x:{ticks:{autoSkip:false,maxRotation:45,font:{size:9}},grid:{display:false}}}
+    }});
+}
+
+// === EXPORT / IMPORT ===
+function exportData() {
+    const obj={version:'v5.0',exportDate:new Date().toISOString(),data:{}};
+    for (let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('tracker_')||k==='cleaning_data'||k==='customIngredients')obj.data[k]=localStorage.getItem(k);}
+    const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`skin-tracker-backup-${getToday()}.json`;document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);
+    alert('✅ Data exported!');
+}
+
+function importData(event) {
+    const file=event.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            const obj=JSON.parse(e.target.result);if(!obj.data)throw new Error();
+            if(!confirm(`Replace all data with backup from ${new Date(obj.exportDate).toLocaleDateString('en-AU')}?`)){event.target.value='';return;}
+            const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('tracker_')||k==='cleaning_data'||k==='customIngredients')keys.push(k);}
+            keys.forEach(k=>localStorage.removeItem(k));Object.keys(obj.data).forEach(k=>localStorage.setItem(k,obj.data[k]));
+            alert('✅ Data imported! Reloading...');location.reload();
+        }catch(err){alert('❌ Import failed. Check the file.');event.target.value='';}
+    };
+    reader.readAsText(file);
+}
+
+function exportCSV() {
+    const headers=['date','wakeTime','sleepTime','sleepQuality','skin_m_eyes','skin_m_face','skin_m_body','skin_m_flakiness','skin_m_dryness','skin_m_itchiness','skin_m_redness','skin_m_soreness','skin_m_anxiety','skin_m_depression','skin_e_eyes','skin_e_face','skin_e_body','skin_e_flakiness','skin_e_dryness','skin_e_itchiness','skin_e_redness','skin_e_soreness','skin_e_anxiety','skin_e_depression','weather_minTemp','weather_maxTemp','weather_humidity','weather_rainfall','trig_dairy','trig_garlic','trig_onion','trig_soy','trig_chilli','trig_chocolate','trig_caffeine','trig_softDrink','trig_alcohol','trig_other','habit_morningSun','habit_surfing','habit_walk','habit_afternoonSun','habit_socialise','habit_meditate','prod_lifeAdmin','prod_portuguese','prod_budget','prod_travelPlanning','relax_reading','relax_tv','relax_videoGames','smokeFree','bikeTime','bikeCalories'];
+    const rows=allData.map(d=>{const sm=d.skin?.morning||{},se=d.skin?.evening||{},w=d.weather||{},t=d.diet?.triggers||{},h=d.habits||{},p=d.productivity||{},r=d.relaxing||{};return[d.date,d.wakeTime||'',d.sleepTime||'',d.sleepQuality||'',sm.eyes||'',sm.face||'',sm.body||'',sm.flakiness||'',sm.dryness||'',sm.itchiness||'',sm.redness||'',sm.soreness||'',sm.appearanceAnxiety||'',sm.depressionFatigue||'',se.eyes||'',se.face||'',se.body||'',se.flakiness||'',se.dryness||'',se.itchiness||'',se.redness||'',se.soreness||'',se.appearanceAnxiety||'',se.depressionFatigue||'',w.minTemp||'',w.maxTemp||'',w.humidity||'',w.rainfall||'',t.dairy?1:0,t.garlic?1:0,t.onion?1:0,t.soy?1:0,t.chilli?1:0,t.chocolate?1:0,t.caffeine?1:0,t.softDrink?1:0,t.alcohol?1:0,(t.other||[]).join(';'),h.morningSun?1:0,h.surfing||0,h.walk||0,h.afternoonSun?1:0,h.socialise?1:0,h.meditate||0,p.lifeAdmin||0,p.portuguese||0,p.budget||0,p.travelPlanning||0,r.reading||0,r.tv||0,r.videoGames||0,d.smokeFree!==false?1:0,d.bikeTime||0,d.bikeCalories||0].join(',');});
+    const csv=[headers.join(','),...rows].join('\n');
+    const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=`skin-tracker-${getToday()}.csv`;document.body.appendChild(link);link.click();document.body.removeChild(link);URL.revokeObjectURL(url);
+}
+
+// === INITIALIZATION ===
+todayData = loadTodayData();
+allData = loadAllData();
+allData.sort((a,b) => new Date(b.date)-new Date(a.date));
+cleaningData = loadCleaningData();
+currentEditDate = getToday();
+
+document.getElementById('dateInput').value = currentEditDate;
+document.getElementById('datePicker').style.display = 'flex';
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+populateIngredientDropdowns();
+toggleSkinPeriod(new Date().getHours()>=13 ? 'evening' : 'morning');
+restoreUI();
+initTimePicker();
+initChartTouchPan('skinChart','skinScrollContainer');
+initChartTouchPan('sleepChart','sleepScrollContainer');
+</script>
+</body>
+</html>

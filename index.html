@@ -379,13 +379,17 @@
         .cream-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #7c6fe0; }
         .cream-footnote { font-size: 10px; color: #999; margin-top: 6px; line-height: 1.4; }
         /* Diet */
-        .meal-add-row { display: flex; gap: 5px; margin-bottom: 7px; }
-        .meal-add-row select, .meal-add-row input[type="text"] {
-            flex: 1; padding: 8px; border: 1.5px solid #e8e3ff;
+        .meal-add-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+        .meal-add-row select {
+            width: 100%; padding: 8px; border: 1.5px solid #e8e3ff;
+            border-radius: 9px; font-size: 13px; font-family: inherit; background: white;
+        }
+        .meal-add-row input[type="text"] {
+            flex: 1; min-width: 0; padding: 8px; border: 1.5px solid #e8e3ff;
             border-radius: 9px; font-size: 13px; font-family: inherit;
         }
         .meal-add-row button {
-            padding: 8px 13px; background: #7c6fe0; color: white;
+            padding: 8px 16px; background: #7c6fe0; color: white; flex-shrink: 0;
             border: none; border-radius: 9px; font-size: 17px;
             cursor: pointer; touch-action: manipulation;
         }

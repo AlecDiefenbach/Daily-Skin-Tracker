@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1">
-    <title>Daily Skin Tracker v5</title>
+    <title>Daily Skin Tracker v6</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -369,11 +369,11 @@
         .cream-row-label { font-size: 11px; font-weight: 700; color: #4c3fa0; padding: 2px 0; }
         .cream-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .cream-plus-btn {
-            width: 32px; height: 32px; border: none; border-radius: 8px;
+            width: 26px; height: 26px; border: none; border-radius: 7px;
             background: linear-gradient(135deg, #7c6fe0, #a78bfa);
-            color: white; font-size: 19px; cursor: pointer;
+            color: white; font-size: 18px; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            touch-action: manipulation;
+            touch-action: manipulation; line-height: 1;
         }
         .cream-count { font-size: 14px; font-weight: bold; color: #7c6fe0; min-height: 17px; }
         .cream-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #7c6fe0; }
@@ -464,6 +464,43 @@
             width: 100%; padding: 8px; border: 1.5px solid #e8e3ff;
             border-radius: 9px; font-size: 14px; font-family: inherit;
         }
+        /* Stat sub-tab content */
+        .stat-tab-content { display: none; }
+        /* Steroid calendar */
+        .scal-legend { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+        .scal-tag { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; color: white; }
+        .scal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+        .scal-header { text-align: center; font-size: 9px; font-weight: 700; color: #666; padding: 3px 0; }
+        .scal-day {
+            background: #f9f7ff; border-radius: 7px; padding: 4px 2px;
+            min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+            border: 1px solid #ede9fe;
+        }
+        .scal-day.scal-today { background: #ede9fe; border-color: #7c6fe0; }
+        .scal-day.scal-future { background: transparent; border-color: transparent; }
+        .scal-date { font-size: 10px; font-weight: 600; color: #333; }
+        .scal-dots { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
+        .scal-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        /* Cream counter row */
+        .cream-count-row { display: flex; align-items: center; gap: 3px; }
+        .cream-minus-btn {
+            width: 26px; height: 26px; border: none; border-radius: 7px;
+            background: #f87171; color: white; font-size: 18px; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            touch-action: manipulation; line-height: 1;
+        }
+        .cream-minus-btn:active { transform: scale(0.9); }
+        /* Data tab buttons */
+        .data-action-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 14px;
+            font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 10px;
+            touch-action: manipulation; text-align: left;
+        }
+        .export-btn { background: linear-gradient(135deg, #7c6fe0, #a78bfa); color: white; }
+        .csv-btn { background: linear-gradient(135deg, #22c55e, #4ade80); color: white; }
+        .import-btn { background: linear-gradient(135deg, #f97316, #fb923c); color: white; }
+        /* Diet history time label */
+        .diet-time { font-size: 9px; color: #9ca3af; }
     </style>
 </head>
 <body>
@@ -472,7 +509,7 @@
     <div class="header">
         <div class="header-title">
             <h1>🌿 Daily Skin Tracker</h1>
-            <span class="version">v5</span>
+            <span class="version">v6</span>
         </div>
         <div class="mode-switcher">
             <button class="mode-btn active" id="modeBtnEntry" onclick="switchMode('entry')">✏️ Entry</button>
@@ -483,13 +520,6 @@
             <button onclick="goToToday()" id="todayBtn" style="background:#4ade80;color:#14532d;" touch-action="manipulation">Today</button>
             <label>📅</label>
             <input type="date" id="dateInput" onchange="loadDateData()">
-        </div>
-        <!-- Hidden import/export -->
-        <div style="display:none;">
-            <button onclick="exportData()">Export JSON</button>
-            <button onclick="exportCSV()">Export CSV</button>
-            <button onclick="document.getElementById('importFile').click()">Import JSON</button>
-            <input type="file" id="importFile" accept=".json" onchange="importData(event)">
         </div>
     </div>
 
@@ -764,32 +794,50 @@
                         <div></div>
                         <div class="cream-col-header">👁</div>
                         <div class="cream-col-header">😊</div>
-                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-col-header">👕</div>
                         <div class="cream-row-label">QV</div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','eyes')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qv-eyes">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qv','eyes')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qv-eyes">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qv','eyes')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','face')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qv-face">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qv','face')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qv-face">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qv','face')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qv','body')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qv-body">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qv','body')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qv-body">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qv','body')">+</button>
+                            </div>
                         </div>
                         <div class="cream-row-label">QV Int</div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','eyes')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qvInt-eyes">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qvInt','eyes')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qvInt-eyes">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','eyes')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','face')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qvInt-face">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qvInt','face')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qvInt-face">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','face')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','body')">+</button>
-                            <span class="cream-count" id="cream-count-morning-qvInt-body">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('morning','qvInt','body')">−</button>
+                                <span class="cream-count" id="cream-count-morning-qvInt-body">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('morning','qvInt','body')">+</button>
+                            </div>
                         </div>
                     </div>
                     <div class="cream-section-title">💊 Steroid Creams</div>
@@ -797,7 +845,7 @@
                         <div></div>
                         <div class="cream-col-header">👁</div>
                         <div class="cream-col-header">😊</div>
-                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-col-header">👕</div>
                         <div class="cream-row-label">HC</div>
                         <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-hc-eyes" onchange="toggleSteroid('morning','hc','eyes')"></div>
                         <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-morning-hc-face" onchange="toggleSteroid('morning','hc','face')"></div>
@@ -825,32 +873,50 @@
                         <div></div>
                         <div class="cream-col-header">👁</div>
                         <div class="cream-col-header">😊</div>
-                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-col-header">👕</div>
                         <div class="cream-row-label">QV</div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','eyes')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qv-eyes">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qv','eyes')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qv-eyes">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qv','eyes')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','face')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qv-face">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qv','face')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qv-face">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qv','face')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qv','body')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qv-body">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qv','body')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qv-body">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qv','body')">+</button>
+                            </div>
                         </div>
                         <div class="cream-row-label">QV Int</div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','eyes')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qvInt-eyes">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qvInt','eyes')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qvInt-eyes">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','eyes')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','face')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qvInt-face">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qvInt','face')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qvInt-face">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','face')">+</button>
+                            </div>
                         </div>
                         <div class="cream-cell">
-                            <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','body')">+</button>
-                            <span class="cream-count" id="cream-count-evening-qvInt-body">0</span>
+                            <div class="cream-count-row">
+                                <button class="cream-minus-btn" onclick="decrementCream('evening','qvInt','body')">−</button>
+                                <span class="cream-count" id="cream-count-evening-qvInt-body">0</span>
+                                <button class="cream-plus-btn" onclick="incrementCream('evening','qvInt','body')">+</button>
+                            </div>
                         </div>
                     </div>
                     <div class="cream-section-title">💊 Steroid Creams</div>
@@ -858,7 +924,7 @@
                         <div></div>
                         <div class="cream-col-header">👁</div>
                         <div class="cream-col-header">😊</div>
-                        <div class="cream-col-header">🧴</div>
+                        <div class="cream-col-header">👕</div>
                         <div class="cream-row-label">HC</div>
                         <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-hc-eyes" onchange="toggleSteroid('evening','hc','eyes')"></div>
                         <div class="cream-cell"><input type="checkbox" class="cream-checkbox" id="steroid-evening-hc-face" onchange="toggleSteroid('evening','hc','face')"></div>
@@ -1239,76 +1305,129 @@
 
     <!-- STATS MODE -->
     <div id="statsMode" style="display:none;">
-        <div class="card">
-            <h2>📅 Recent History</h2>
-            <div id="historyList"></div>
+        <!-- Stats sub-tab nav -->
+        <div class="tab-nav">
+            <button class="tab-button active" onclick="switchStatTab('history',event)">📅<span class="tab-label">History</span></button>
+            <button class="tab-button" onclick="switchStatTab('skin',event)">🌡️<span class="tab-label">Skin</span></button>
+            <button class="tab-button" onclick="switchStatTab('diet',event)">🥗<span class="tab-label">Diet</span></button>
+            <button class="tab-button" onclick="switchStatTab('sleep',event)">😴<span class="tab-label">Sleep</span></button>
+            <button class="tab-button" onclick="switchStatTab('goals',event)">🎯<span class="tab-label">Goals</span></button>
+            <button class="tab-button" onclick="switchStatTab('data',event)">📤<span class="tab-label">Data</span></button>
         </div>
-        <div class="card">
-            <h2>🌡️ Skin Tracking</h2>
-            <div style="position:relative;">
-                <div style="height:380px;position:relative;"><canvas id="skinChart"></canvas></div>
-                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="skinScrollContainer" onscroll="updateChartWindow('skin')">
-                    <div id="skinScrollTrack" style="height:1px;"></div>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <h2>😴 Sleep Patterns</h2>
-            <div style="position:relative;">
-                <div style="position:relative;"><canvas id="sleepChart" style="height:360px;"></canvas></div>
-                <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="sleepScrollContainer" onscroll="updateChartWindow('sleep')">
-                    <div id="sleepScrollTrack" style="height:1px;"></div>
-                </div>
+
+        <!-- History sub-tab -->
+        <div class="stat-tab-content" id="stat-history">
+            <div class="card">
+                <h2>📅 Recent History</h2>
+                <div id="historyList"></div>
             </div>
         </div>
-        <div class="card">
-            <div class="stat-section">
-                <h3>🏃 Activity This Week</h3>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🏄 Surfing days</span><span id="surfingCount">0/7</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="surfingProgress"></div></div>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🚶 Walking days</span><span id="walkCount">0/7</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="walkProgress"></div></div>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🌅 Morning sun days</span><span id="morningSunCount">0/7</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="morningSunProgress"></div></div>
+
+        <!-- Skin sub-tab -->
+        <div class="stat-tab-content" id="stat-skin">
+            <div class="card">
+                <h2>🌡️ Skin Overall Score</h2>
+                <p style="font-size:12px;color:#888;margin-bottom:10px;">Average of all 10 skin sliders per session</p>
+                <div style="position:relative;">
+                    <div style="height:380px;position:relative;"><canvas id="skinChart"></canvas></div>
+                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="skinScrollContainer" onscroll="updateChartWindow('skin')">
+                        <div id="skinScrollTrack" style="height:1px;"></div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-section">
-                <h3>⏱️ Time This Week</h3>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>📋 Life Admin (goal 3.5h)</span><span id="lifeAdminTime">0h / 3.5h</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="lifeAdminProgress"></div></div>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>📚 Reading (goal 70m)</span><span id="readingTime">0m / 70m</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="readingProgress"></div></div>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🇧🇷 Portuguese (goal 70m)</span><span id="portugueseTime">0m / 70m</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="portugueseProgress"></div></div>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🎮 Video Games (max 2.3h)</span><span id="videoGamesTime">0h / 2.3h</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="videoGamesProgress"></div></div>
+            <div class="card">
+                <h2>💊 Steroid Usage</h2>
+                <div id="steroidCalendar"></div>
+            </div>
+        </div>
+
+        <!-- Diet sub-tab -->
+        <div class="stat-tab-content" id="stat-diet">
+            <div class="card">
+                <h2>🥗 Diet History</h2>
+                <div id="dietHistoryList"></div>
+            </div>
+        </div>
+
+        <!-- Sleep sub-tab -->
+        <div class="stat-tab-content" id="stat-sleep">
+            <div class="card">
+                <h2>😴 Sleep Patterns</h2>
+                <div style="position:relative;">
+                    <div style="position:relative;"><canvas id="sleepChart" style="height:360px;"></canvas></div>
+                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;height:18px;margin-top:4px;" id="sleepScrollContainer" onscroll="updateChartWindow('sleep')">
+                        <div id="sleepScrollTrack" style="height:1px;"></div>
+                    </div>
                 </div>
             </div>
-            <div class="stat-section">
-                <h3>⚠️ Diet Triggers This Week</h3>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🍫 Chocolate days</span><span id="chocolateDays">0</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="chocolateProgress"></div></div>
+        </div>
+
+        <!-- Goals sub-tab -->
+        <div class="stat-tab-content" id="stat-goals">
+            <div class="card">
+                <div class="stat-section">
+                    <h3>🏃 Activity This Week</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🏄 Surfing days</span><span id="surfingCount">0/7</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="surfingProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🚶 Walking days</span><span id="walkCount">0/7</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="walkProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🌅 Morning sun days</span><span id="morningSunCount">0/7</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="morningSunProgress"></div></div>
+                    </div>
                 </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>🍺 Alcohol days</span><span id="alcoholDays">0</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="alcoholProgress"></div></div>
+                <div class="stat-section">
+                    <h3>⏱️ Time This Week</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>📋 Life Admin (goal 3.5h)</span><span id="lifeAdminTime">0h / 3.5h</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="lifeAdminProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>📚 Reading (goal 70m)</span><span id="readingTime">0m / 70m</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="readingProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🇧🇷 Portuguese (goal 70m)</span><span id="portugueseTime">0m / 70m</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="portugueseProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🎮 Video Games (max 2.3h)</span><span id="videoGamesTime">0h / 2.3h</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="videoGamesProgress"></div></div>
+                    </div>
                 </div>
-                <div class="progress-bar-container">
-                    <div class="progress-label"><span>☕ Caffeine days</span><span id="caffeineDays">0</span></div>
-                    <div class="progress-bar"><div class="progress-fill" id="caffeineProgress"></div></div>
+                <div class="stat-section">
+                    <h3>⚠️ Diet Triggers This Week</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🍫 Chocolate days</span><span id="chocolateDays">0</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="chocolateProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>🍺 Alcohol days</span><span id="alcoholDays">0</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="alcoholProgress"></div></div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-label"><span>☕ Caffeine days</span><span id="caffeineDays">0</span></div>
+                        <div class="progress-bar"><div class="progress-fill" id="caffeineProgress"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data sub-tab -->
+        <div class="stat-tab-content" id="stat-data">
+            <div class="card">
+                <h2>📤 Import / Export</h2>
+                <p style="color:#666;font-size:13px;margin-bottom:16px;">Back up your data or restore from a previous backup. Export to CSV for analysis in Excel/Sheets.</p>
+                <button class="data-action-btn export-btn" onclick="exportData()">⬇️ Export JSON Backup</button>
+                <button class="data-action-btn csv-btn" onclick="exportCSV()">📊 Export CSV</button>
+                <button class="data-action-btn import-btn" onclick="document.getElementById('importFile').click()">⬆️ Import JSON Backup</button>
+                <input type="file" id="importFile" accept=".json" onchange="importData(event)" style="display:none;">
+                <div style="margin-top:14px;padding:12px;background:#f5f3ff;border-radius:12px;font-size:12px;color:#555;line-height:1.6;">
+                    💡 <strong>Merging old tracker data?</strong> Export from your old device, then import here. Note: importing replaces all current data — export a backup first!
                 </div>
             </div>
         </div>
@@ -1578,7 +1697,8 @@ function addIngredient(meal) {
     const value = ((sel&&sel.value)||(txt&&txt.value)||'').trim();
     if (!value) return;
     if (!todayData.diet.meals[meal]) todayData.diet.meals[meal] = [];
-    todayData.diet.meals[meal].push(value);
+    const time = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
+    todayData.diet.meals[meal].push({text: value, time: time});
     if (sel) sel.value=''; if (txt) txt.value='';
     renderChips(meal); saveTodayData();
 }
@@ -1590,7 +1710,11 @@ function removeIngredient(meal, index) {
 function renderChips(meal) {
     const c = document.getElementById(`chips-${meal}`);
     if (!c) return;
-    c.innerHTML = (todayData.diet.meals[meal]||[]).map((item,i)=>`<span class="chip">${item}<button class="chip-del" onclick="removeIngredient('${meal}',${i})">×</button></span>`).join('');
+    c.innerHTML = (todayData.diet.meals[meal]||[]).map((item,i)=>{
+        const text = typeof item === 'string' ? item : item.text;
+        const timeStr = typeof item === 'object' && item.time ? `<span style="font-size:9px;color:#9ca3af;margin-left:2px;">${item.time}</span>` : '';
+        return `<span class="chip">${text}${timeStr}<button class="chip-del" onclick="removeIngredient('${meal}',${i})">×</button></span>`;
+    }).join('');
 }
 
 function saveCustomIngredient(meal) {
@@ -1612,7 +1736,8 @@ function addDrink() {
     const value = txt ? txt.value.trim() : '';
     if (!value) return;
     if (!todayData.diet.drinks) todayData.diet.drinks=[];
-    todayData.diet.drinks.push(value); txt.value='';
+    const time = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
+    todayData.diet.drinks.push({text: value, time: time}); txt.value='';
     renderDrinkChips(); saveTodayData();
 }
 
@@ -1621,7 +1746,11 @@ function removeDrink(index) { todayData.diet.drinks.splice(index,1); renderDrink
 function renderDrinkChips() {
     const c = document.getElementById('chips-drinks');
     if (!c) return;
-    c.innerHTML = (todayData.diet.drinks||[]).map((item,i)=>`<span class="chip">${item}<button class="chip-del" onclick="removeDrink(${i})">×</button></span>`).join('');
+    c.innerHTML = (todayData.diet.drinks||[]).map((item,i)=>{
+        const text = typeof item === 'string' ? item : item.text;
+        const timeStr = typeof item === 'object' && item.time ? `<span style="font-size:9px;color:#9ca3af;margin-left:2px;">${item.time}</span>` : '';
+        return `<span class="chip">${text}${timeStr}<button class="chip-del" onclick="removeDrink(${i})">×</button></span>`;
+    }).join('');
 }
 
 function toggleTrigger(trigger) {
@@ -1981,7 +2110,115 @@ function switchMode(mode) {
     document.getElementById('statsMode').style.display=mode==='stats'?'':'none';
     document.getElementById('modeBtnEntry').classList.toggle('active',mode==='entry');
     document.getElementById('modeBtnStats').classList.toggle('active',mode==='stats');
-    if (mode==='stats') { renderHistory(); renderStats(); }
+    if (mode==='stats') { updateHistory(); switchStatTab('history'); }
+}
+
+function switchStatTab(tab, e) {
+    document.querySelectorAll('#statsMode .tab-button').forEach(b => b.classList.remove('active'));
+    if (e) {
+        e.currentTarget.classList.add('active');
+    } else {
+        const tabOrder = ['history','skin','diet','sleep','goals','data'];
+        const idx = tabOrder.indexOf(tab);
+        const btns = document.querySelectorAll('#statsMode .tab-button');
+        if (idx >= 0 && btns[idx]) btns[idx].classList.add('active');
+    }
+    document.querySelectorAll('.stat-tab-content').forEach(c => c.style.display = 'none');
+    const panel = document.getElementById('stat-' + tab);
+    if (panel) panel.style.display = 'block';
+    if (tab === 'history') renderHistory();
+    else if (tab === 'skin') { renderSkinChart(); renderSteroidCalendar(); initializeScrollTracks(); }
+    else if (tab === 'diet') renderDietHistory();
+    else if (tab === 'sleep') { renderSleepChart(); initializeScrollTracks(); }
+    else if (tab === 'goals') renderStats();
+}
+
+// === STEROID CALENDAR ===
+function renderSteroidCalendar() {
+    const calEl = document.getElementById('steroidCalendar');
+    if (!calEl) return;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dataMap = getDataMap();
+    const steroids = [
+        {key:'hc', label:'HC', color:'#3b82f6'},
+        {key:'advF', label:'AdvF', color:'#f97316'},
+        {key:'adv', label:'Adv', color:'#8b5cf6'},
+        {key:'eluph', label:'Eluph', color:'#ef4444'}
+    ];
+    function steroidUsedOnDay(d, sKey) {
+        const areas = ['eyes','face','body'], periods = ['morning','evening'];
+        return periods.some(p => areas.some(a => d.creams?.[p]?.steroids?.[sKey]?.[a]));
+    }
+    let html = '<div class="scal-legend">';
+    steroids.forEach(s => { html += `<span class="scal-tag" style="background:${s.color}">${s.label}</span>`; });
+    html += '</div><div class="scal-grid">';
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { html += `<div class="scal-header">${d}</div>`; });
+    // Start from Sunday 5 full weeks ago
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - today.getDay() - 5*7);
+    const current = new Date(startDate);
+    while (current <= today) {
+        const ds = current.toISOString().split('T')[0];
+        const d = dataMap.get(ds);
+        const isToday = ds === today.toISOString().split('T')[0];
+        html += `<div class="scal-day${isToday?' scal-today':''}">`;
+        html += `<div class="scal-date">${current.getDate()}</div>`;
+        if (d) {
+            const used = steroids.filter(s => steroidUsedOnDay(d, s.key));
+            if (used.length > 0) html += '<div class="scal-dots">' + used.map(s => `<span class="scal-dot" style="background:${s.color}" title="${s.label}"></span>`).join('') + '</div>';
+        }
+        html += '</div>';
+        current.setDate(current.getDate() + 1);
+    }
+    // Pad remaining days of last week
+    for (let i = today.getDay() + 1; i < 7; i++) { html += '<div class="scal-day scal-future"></div>'; }
+    html += '</div>';
+    calEl.innerHTML = html;
+}
+
+// === DIET HISTORY ===
+function renderDietHistory() {
+    const el = document.getElementById('dietHistoryList');
+    if (!el) return;
+    if (allData.length === 0) { el.innerHTML = '<p style="color:#666;text-align:center;padding:20px;">No diet history yet.</p>'; return; }
+    const mealLabels = {breakfast:'🍳 Breakfast', lunch:'🥗 Lunch', dinner:'🍽️ Dinner', snacks:'🍓 Snacks'};
+    const trigLabels = {dairy:'🥛 Dairy',garlic:'🧄 Garlic',onion:'🧅 Onion',soy:'🫘 Soy',chilli:'🌶️ Chilli',chocolate:'🍫 Chocolate',caffeine:'☕ Caffeine',softDrink:'🥤 Soft Drink',alcohol:'🍺 Alcohol'};
+    const entries = allData.slice(0, 14).map(d => {
+        const date = new Date(d.date+'T00:00:00').toLocaleDateString('en-AU',{weekday:'short',month:'short',day:'numeric'});
+        const sections = [];
+        Object.keys(mealLabels).forEach(meal => {
+            const items = d.diet?.meals?.[meal] || [];
+            if (items.length > 0) {
+                const texts = items.map(i => typeof i === 'string' ? i : (i.time ? `${i.text}<span class="diet-time"> ${i.time}</span>` : i.text)).join(', ');
+                sections.push(`<div><strong>${mealLabels[meal]}:</strong> ${texts}</div>`);
+            }
+        });
+        const drinks = d.diet?.drinks || [];
+        if (drinks.length > 0) {
+            const texts = drinks.map(i => typeof i === 'string' ? i : (i.time ? `${i.text}<span class="diet-time"> ${i.time}</span>` : i.text)).join(', ');
+            sections.push(`<div><strong>🥤 Drinks:</strong> ${texts}</div>`);
+        }
+        const triggers = [];
+        if (d.diet?.triggers) {
+            Object.keys(trigLabels).forEach(t => { if (d.diet.triggers[t]) triggers.push(trigLabels[t]); });
+            if (d.diet.triggers.other?.length) triggers.push(...d.diet.triggers.other);
+        }
+        if (triggers.length > 0) sections.push(`<div><strong>⚠️ Triggers:</strong> ${triggers.join(', ')}</div>`);
+        if (sections.length === 0) return null;
+        return `<div class="history-item"><div class="history-date">${date}</div><div class="history-details">${sections.join('')}</div></div>`;
+    }).filter(Boolean);
+    el.innerHTML = entries.length > 0 ? entries.join('') : '<p style="color:#666;text-align:center;padding:20px;">No diet data yet.</p>';
+}
+
+// === DECREMENT CREAM ===
+function decrementCream(period, type, area) {
+    if (!todayData.creams) todayData.creams = getDefaultData(todayData.date).creams;
+    const current = todayData.creams[period].moisturiser[type][area] || 0;
+    if (current <= 0) return;
+    todayData.creams[period].moisturiser[type][area] = current - 1;
+    const el = document.getElementById(`cream-count-${period}-${type}-${area}`);
+    if (el) el.textContent = todayData.creams[period].moisturiser[type][area];
+    saveTodayData();
 }
 
 // === EXERCISE ===
@@ -2101,7 +2338,6 @@ function renderStats() {
     document.getElementById('chocolateDays').textContent=chocDays; document.getElementById('chocolateProgress').style.width=`${(chocDays/7)*100}%`;
     document.getElementById('alcoholDays').textContent=alcDays; document.getElementById('alcoholProgress').style.width=`${(alcDays/7)*100}%`;
     document.getElementById('caffeineDays').textContent=caffDays; document.getElementById('caffeineProgress').style.width=`${(caffDays/7)*100}%`;
-    renderSleepChart(); renderSkinChart(); initializeScrollTracks();
 }
 
 // === CHART HELPERS ===
@@ -2155,14 +2391,13 @@ function renderSleepChart() {
 // === SKIN CHART ===
 function renderSkinChart() {
     const {labels,dateStrs}=getWindowedData(skinWindowStart);
-    const mornSev=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.morning)return null;return parseFloat((['eyes','face','body'].reduce((s,f)=>s+(e.skin.morning[f]||1),0)/3).toFixed(1));});
-    const eveSev=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.evening)return null;return parseFloat((['eyes','face','body'].reduce((s,f)=>s+(e.skin.evening[f]||1),0)/3).toFixed(1));});
-    const symptomData=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.morning)return null;return parseFloat((['flakiness','dryness','itchiness','redness','soreness'].reduce((s,f)=>s+(e.skin.morning[f]||1),0)/5).toFixed(1));});
-    if (skinChart){skinChart.data.labels=labels;skinChart.data.datasets[0].data=mornSev;skinChart.data.datasets[1].data=eveSev;skinChart.data.datasets[2].data=symptomData;skinChart.update('none');return;}
+    const allSkinFields=['eyes','face','body','flakiness','dryness','itchiness','redness','soreness','appearanceAnxiety','depressionFatigue'];
+    const mornOverall=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.morning)return null;return parseFloat((allSkinFields.reduce((s,f)=>s+(e.skin.morning[f]||1),0)/allSkinFields.length).toFixed(1));});
+    const eveOverall=dateStrs.map(ds=>{const e=getDataMap().get(ds);if(!e?.skin?.evening)return null;return parseFloat((allSkinFields.reduce((s,f)=>s+(e.skin.evening[f]||1),0)/allSkinFields.length).toFixed(1));});
+    if (skinChart){skinChart.data.labels=labels;skinChart.data.datasets[0].data=mornOverall;skinChart.data.datasets[1].data=eveOverall;skinChart.update('none');return;}
     skinChart=new Chart(document.getElementById('skinChart'),{type:'line',data:{labels,datasets:[
-        {label:'🌅 Morning Severity',data:mornSev,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#f97316',spanGaps:false,segment:{borderColor:gapSegmentStyle}},
-        {label:'🌆 Evening Severity',data:eveSev,borderColor:'#7c6fe0',backgroundColor:'rgba(124,111,224,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#7c6fe0',spanGaps:false,segment:{borderColor:gapSegmentStyle}},
-        {label:'😣 Symptoms (AM)',data:symptomData,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#ef4444',spanGaps:false,segment:{borderColor:gapSegmentStyle}}
+        {label:'🌅 Morning Overall',data:mornOverall,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#f97316',spanGaps:false,segment:{borderColor:gapSegmentStyle}},
+        {label:'🌆 Evening Overall',data:eveOverall,borderColor:'#7c6fe0',backgroundColor:'rgba(124,111,224,0.1)',tension:0.3,borderWidth:2,pointRadius:ctx=>ctx.parsed.y!==null?4:0,pointBackgroundColor:'#7c6fe0',spanGaps:false,segment:{borderColor:gapSegmentStyle}}
     ]},options:{animation:false,responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,padding:12,font:{size:12,weight:'600'}}}},
         scales:{y:{min:1,max:10,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,0.08)'}},x:{ticks:{autoSkip:false,maxRotation:45,font:{size:9}},grid:{display:false}}}
@@ -2220,3 +2455,4 @@ initChartTouchPan('sleepChart','sleepScrollContainer');
 </script>
 </body>
 </html>
+

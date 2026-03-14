@@ -1461,6 +1461,9 @@ function getToday() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
 }
+function toLocalDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function getDefaultData(date) {
     const emptySkin = () => ({ eyes:1,face:1,body:1,flakiness:1,dryness:1,itchiness:1,redness:1,soreness:1,appearanceAnxiety:1,depressionFatigue:1 });
@@ -1541,7 +1544,7 @@ function saveCleaningData() { localStorage.setItem('cleaning_data', JSON.stringi
 function getLastNDays(n) {
     const today = new Date(); today.setHours(0,0,0,0);
     const cutoff = new Date(today); cutoff.setDate(cutoff.getDate()-n+1);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
+    const cutoffStr = toLocalDateStr(cutoff);
     return allData.filter(d => d.date >= cutoffStr);
 }
 
@@ -2158,9 +2161,9 @@ function renderSteroidCalendar() {
     startDate.setDate(today.getDate() - today.getDay() - 5*7);
     const current = new Date(startDate);
     while (current <= today) {
-        const ds = current.toISOString().split('T')[0];
+        const ds = toLocalDateStr(current);
         const d = dataMap.get(ds);
-        const isToday = ds === today.toISOString().split('T')[0];
+        const isToday = ds === toLocalDateStr(today);
         html += `<div class="scal-day${isToday?' scal-today':''}">`;
         html += `<div class="scal-date">${current.getDate()}</div>`;
         if (d) {
@@ -2349,7 +2352,7 @@ function getCompleteDateRange() {
     let daysBack=90;
     if (allData.length>0){const sorted=[...allData].sort((a,b)=>a.date.localeCompare(b.date));const earliest=new Date(sorted[0].date+'T00:00:00');daysBack=Math.min(90,Math.floor((today-earliest)/(1000*60*60*24))+1);}
     const allLabels=[],allDateStrs=[];
-    for (let i=daysBack-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const ds=d.toISOString().split('T')[0];allDateStrs.push(ds);allLabels.push(d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate()+' '+d.toLocaleDateString('en-AU',{month:'short'}));}
+    for (let i=daysBack-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const ds=toLocalDateStr(d);allDateStrs.push(ds);allLabels.push(d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate()+' '+d.toLocaleDateString('en-AU',{month:'short'}));}
     totalDataDays=daysBack;
     return {allLabels,allDateStrs,totalDays:daysBack};
 }
@@ -2383,8 +2386,8 @@ function renderSleepChart() {
         {label:'Wake Time',data:wakeData,borderColor:'#ff9800',backgroundColor:'rgba(255,152,0,0.1)',pointBackgroundColor:'#ff9800',pointRadius:ctx=>ctx.parsed.y!==null?5:0,tension:0.2,spanGaps:false,segment:{borderColor:gapSegmentStyle}},
         {label:'Bed Time',data:sleepData,borderColor:'#7c6fe0',backgroundColor:'rgba(124,111,224,0.1)',pointBackgroundColor:'#7c6fe0',pointRadius:ctx=>ctx.parsed.y!==null?5:0,tension:0.2,spanGaps:false,segment:{borderColor:gapSegmentStyle}}
     ]},options:{animation:false,responsive:true,maintainAspectRatio:false,
-        scales:{y:{min:5,max:28,ticks:{stepSize:1,callback:v=>`${Math.floor(v%24)}:00`},grid:{color:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?'rgba(255,0,0,0.4)':'rgba(0,0,0,0.08)',lineWidth:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?2:1,borderDash:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?[5,5]:[]}},x:{ticks:{autoSkip:false,maxRotation:45,font:{size:9}},grid:{display:false}}},
-        plugins:{legend:{labels:{usePointStyle:true},onClick:null},tooltip:{callbacks:{label:function(c){if(c.parsed.y===null)return null;const v=c.parsed.y,h=Math.floor(v%24),m=Math.round((v-Math.floor(v))*60);return `${c.dataset.label}: ${h}:${String(m).padStart(2,'0')}`;}}}}
+        scales:{y:{min:5,max:28,ticks:{stepSize:1,callback:v=>{const h=Math.floor(v%24);return h===0?'12am':h<12?`${h}am`:h===12?'12pm':`${h-12}pm`;}},grid:{color:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?'rgba(255,0,0,0.4)':'rgba(0,0,0,0.08)',lineWidth:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?2:1,borderDash:ctx=>(ctx.tick.value===7||ctx.tick.value===23)?[5,5]:[]}},x:{ticks:{autoSkip:false,maxRotation:45,font:{size:9}},grid:{display:false}}},
+        plugins:{legend:{labels:{usePointStyle:true},onClick:null},tooltip:{callbacks:{label:function(c){if(c.parsed.y===null)return null;const v=c.parsed.y,h=Math.floor(v%24),m=Math.round((v-Math.floor(v))*60),disp=h===0?`12:${String(m).padStart(2,'0')}am`:h<12?`${h}:${String(m).padStart(2,'0')}am`:h===12?`12:${String(m).padStart(2,'0')}pm`:`${h-12}:${String(m).padStart(2,'0')}pm`;return `${c.dataset.label}: ${disp}`;}}}}
     }});
 }
 
@@ -2455,4 +2458,3 @@ initChartTouchPan('sleepChart','sleepScrollContainer');
 </script>
 </body>
 </html>
-

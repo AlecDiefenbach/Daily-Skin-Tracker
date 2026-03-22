@@ -1878,14 +1878,33 @@ function handlePhotoCapture(event) {
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false});
         try {
+            const dataUrl = await resizePhoto(e.target.result, 1920, 0.85);
             const db = await openPhotoDB();
             const tx = db.transaction('photos','readwrite');
-            tx.objectStore('photos').add({date:currentEditDate||getToday(),time:timeStr,area:currentPhotoArea,dataUrl:e.target.result});
+            tx.objectStore('photos').add({date:currentEditDate||getToday(),time:timeStr,area:currentPhotoArea,dataUrl});
             tx.oncomplete = () => loadPhotoGallery();
         } catch(err) { alert('Could not save photo. Storage may be full.'); }
     };
     reader.readAsDataURL(file);
     event.target.value='';
+}
+
+function resizePhoto(dataUrl, maxPx, quality) {
+    return new Promise(function(resolve) {
+        const img = new Image();
+        img.onload = function() {
+            let w = img.width, h = img.height;
+            if (w > maxPx || h > maxPx) {
+                if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+                else        { w = Math.round(w * maxPx / h); h = maxPx; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = dataUrl;
+    });
 }
 
 async function loadPhotoGallery() {
